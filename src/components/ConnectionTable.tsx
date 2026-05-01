@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { formatRate } from "../lib/format";
+import { badge, cx, iconButton, mutedCell, numeric, panel, panelHeader, panelSubtitle, panelTitle, tableShell, td, th } from "../lib/styles";
 import type { ConnectionTraffic, SortKey } from "../lib/types";
+import { SelectField } from "./SelectField";
 
 type Props = {
   connections: ConnectionTraffic[];
@@ -12,70 +14,81 @@ export function ConnectionTable({ connections, sortKey, onSortChange }: Props) {
   const [compact, setCompact] = useState(false);
 
   return (
-    <section className={`panel table-panel connection-panel${compact ? " compact" : ""}`}>
-      <div className="panel-header">
+    <section className={cx(panel, "flex h-[360px] flex-col overflow-hidden")}>
+      <div className={panelHeader}>
         <div>
-          <div className="panel-title">Connections / Remote Hosts</div>
-          <div className="panel-subtitle">IP, port, protocol, bandwidth, process, and user mapping</div>
+          <div className={panelTitle}>Connections / Remote Hosts</div>
+          <div className={panelSubtitle}>
+            IP, port, protocol, bandwidth, process, and user mapping
+          </div>
         </div>
-        <div className="panel-tools">
-          <span className="sort-label">Sort by:</span>
-          <select
-            className="sort-select"
+        <div className="flex items-center gap-1.5 text-[11px] text-app-muted">
+          <span>Sort by:</span>
+          <SelectField
+            variant="sort"
+            wrapperClassName="w-[98px]"
             value={sortKey}
             onChange={(e) => onSortChange(e.target.value as SortKey)}
           >
             <option value="total">Total</option>
             <option value="received">Received</option>
             <option value="sent">Sent</option>
-          </select>
+          </SelectField>
           <button
             type="button"
-            className="icon-btn"
+            className={iconButton}
             title="Toggle compact rows"
             aria-pressed={compact}
-            onClick={() => setCompact((c) => !c)}
+            onClick={() => setCompact((value) => !value)}
           >
             ≡
           </button>
         </div>
       </div>
 
-      <div className="table-wrap table-scroll connection-scroll">
-        <table className="connection-table">
+      <div className={cx(tableShell, "min-h-[276px]")}>
+        <table className="w-full min-w-[920px] table-fixed border-collapse">
           <colgroup>
-            <col className="col-remote" />
-            <col className="col-port" />
-            <col className="col-proto" />
-            <col className="col-process" />
-            <col className="col-user" />
-            <col className="col-state" />
-            <col className="col-rate" />
-            <col className="col-rate" />
-            <col className="col-rate" />
+            <col className="w-44" />
+            <col className="w-[62px]" />
+            <col className="w-16" />
+            <col className="w-[150px]" />
+            <col className="w-[82px]" />
+            <col className="w-28" />
+            <col className="w-24" />
+            <col className="w-24" />
+            <col className="w-24" />
           </colgroup>
           <thead>
             <tr>
-              <th>Remote IP / Host</th>
-              <th>Port</th>
-              <th>Proto</th>
-              <th>Process (PID)</th>
-              <th>User</th>
-              <th>State</th>
-              <th>Received</th>
-              <th>Sent</th>
-              <th>Total</th>
+              <th className={th}>Remote IP / Host</th>
+              <th className={th}>Port</th>
+              <th className={th}>Proto</th>
+              <th className={th}>Process (PID)</th>
+              <th className={th}>User</th>
+              <th className={th}>State</th>
+              <th className={th}>Received</th>
+              <th className={th}>Sent</th>
+              <th className={th}>Total</th>
             </tr>
           </thead>
           <tbody>
             {connections.length === 0 ? (
-              <tr className="empty-row">
-                <td colSpan={9}>
-                  <div className="empty-state">No active connections match the current filters.</div>
+              <tr>
+                <td className={td(compact)} colSpan={9}>
+                  <div className="px-2 py-6 text-center text-app-muted">
+                    No active connections match the current filters.
+                  </div>
                 </td>
               </tr>
             ) : (
-              connections.map((c) => <ConnectionRow key={connectionKey(c)} connection={c} />)
+              connections.map((connection) => (
+                <ConnectionRow
+                  key={connectionKey(connection)}
+                  connection={connection}
+                  compact={compact}
+                />
+              ))
             )}
           </tbody>
         </table>
@@ -84,30 +97,53 @@ export function ConnectionTable({ connections, sortKey, onSortChange }: Props) {
   );
 }
 
-function ConnectionRow({ connection }: { connection: ConnectionTraffic }) {
-  const stateClass =
-    connection.state === "ESTABLISHED" ? "established"
-    : connection.state === "LISTEN" ? "listen"
-    : "close-wait";
-
+function ConnectionRow({
+  connection,
+  compact,
+}: {
+  connection: ConnectionTraffic;
+  compact: boolean;
+}) {
   const procLabel = `${connection.processName} (${connection.pid})`;
 
   return (
-    <tr>
-      <td>
-        <span className="flag">{connection.flag}</span>{" "}
-        <span className="total-val remote-cell" title={connection.remote}>{connection.remote}</span>
+    <tr className="group/row">
+      <td className={td(compact)}>
+        <span className="inline-block w-[26px] text-center text-[10px] font-bold text-app-muted">
+          {connection.flag}
+        </span>{" "}
+        <span className="font-semibold text-app-text" title={connection.remote}>
+          {connection.remote}
+        </span>
       </td>
-      <td className="port-col">{connection.port}</td>
-      <td><span className="protocol-badge">{connection.protocol}</span></td>
-      <td className="proc-col" title={procLabel}>{procLabel}</td>
-      <td className="user-col">{connection.user}</td>
-      <td><span className={`state-badge ${stateClass}`}>{connection.state}</span></td>
-      <td className="rx-val">{formatRate(connection.received)}</td>
-      <td className="tx-val">{formatRate(connection.sent)}</td>
-      <td className="total-val">{formatRate(connection.received + connection.sent)}</td>
+      <td className={td(compact, cx(mutedCell, numeric))}>{connection.port}</td>
+      <td className={td(compact)}>
+        <span className={badge}>{connection.protocol}</span>
+      </td>
+      <td className={td(compact, mutedCell)} title={procLabel}>
+        {procLabel}
+      </td>
+      <td className={td(compact, mutedCell)}>{connection.user}</td>
+      <td className={td(compact)}>
+        <span className={cx(badge, stateBadgeClass(connection.state))}>
+          {connection.state}
+        </span>
+      </td>
+      <td className={td(compact, cx("text-app-green", numeric))}>{formatRate(connection.received)}</td>
+      <td className={td(compact, cx("text-app-blue", numeric))}>{formatRate(connection.sent)}</td>
+      <td className={td(compact, cx("font-semibold", numeric))}>{formatRate(connection.received + connection.sent)}</td>
     </tr>
   );
+}
+
+function stateBadgeClass(state: ConnectionTraffic["state"]) {
+  if (state === "ESTABLISHED") {
+    return "border-app-green/30 bg-app-green/10 text-app-green";
+  }
+  if (state === "LISTEN") {
+    return "border-app-blue/30 bg-app-blue/10 text-app-blue";
+  }
+  return "border-app-orange/30 bg-app-orange/10 text-app-orange";
 }
 
 function connectionKey(c: ConnectionTraffic) {

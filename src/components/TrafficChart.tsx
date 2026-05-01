@@ -31,7 +31,7 @@ export function TrafficChart({ history }: Props) {
     return () => window.removeEventListener("resize", draw);
   }, [history]);
 
-  return <canvas ref={ref} width={520} height={190} />;
+  return <canvas ref={ref} className="block h-[190px] w-full" width={520} height={190} />;
 }
 
 function prepareCanvas(canvas: HTMLCanvasElement) {

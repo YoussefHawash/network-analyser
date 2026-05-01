@@ -8,12 +8,15 @@ export function HistoryChart({ buckets }: Props) {
 
   useEffect(() => {
     const canvas = ref.current;
-    if (!canvas || buckets.length === 0) return;
+    if (!canvas) return;
 
     const draw = () => {
       const surface = prepareCanvas(canvas);
       if (!surface) return;
       const { ctx, width, height } = surface;
+      ctx.clearRect(0, 0, width, height);
+      if (buckets.length === 0) return;
+
       const padLeft = 34, padRight = 10, padTop = 10, padBottom = 10;
       const graphWidth = width - padLeft - padRight;
       const graphHeight = height - padTop - padBottom;
@@ -21,7 +24,6 @@ export function HistoryChart({ buckets }: Props) {
       const barWidth = (graphWidth / buckets.length) * 0.34;
       const gap = (graphWidth / buckets.length) * 0.12;
 
-      ctx.clearRect(0, 0, width, height);
       ctx.strokeStyle = "#21262d";
       ctx.lineWidth = 0.5;
       ctx.fillStyle = "#484f58";
@@ -55,7 +57,7 @@ export function HistoryChart({ buckets }: Props) {
     return () => window.removeEventListener("resize", draw);
   }, [buckets]);
 
-  return <canvas ref={ref} width={420} height={170} />;
+  return <canvas ref={ref} className="block h-[170px] w-full" width={420} height={170} />;
 }
 
 function prepareCanvas(canvas: HTMLCanvasElement) {

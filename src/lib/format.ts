@@ -43,15 +43,15 @@ export function processIconLabel(p: ProcessTraffic) {
 
 export function processIconClass(name: string) {
   const n = name.toLowerCase();
-  if (n.includes("firefox")) return "app-firefox";
-  if (n.includes("ssh")) return "app-terminal";
-  if (n.includes("curl")) return "app-curl";
-  if (n.includes("apt")) return "app-package";
-  if (n.includes("docker")) return "app-docker";
-  if (n.includes("resolve") || n.includes("systemd")) return "app-system";
-  if (n.includes("python")) return "app-python";
-  if (n.includes("node") || n.includes("vite")) return "app-node";
-  return "app-generic";
+  if (n.includes("firefox")) return "bg-gradient-to-br from-app-orange to-app-danger";
+  if (n.includes("ssh")) return "bg-gradient-to-br from-app-subtle to-app-muted";
+  if (n.includes("curl")) return "bg-gradient-to-br from-app-blueStrong to-app-cyan";
+  if (n.includes("apt")) return "bg-gradient-to-br from-violet-500 to-app-violet";
+  if (n.includes("docker")) return "bg-gradient-to-br from-blue-700 to-app-blue";
+  if (n.includes("resolve") || n.includes("systemd")) return "bg-gradient-to-br from-green-700 to-app-green";
+  if (n.includes("python")) return "bg-gradient-to-br from-app-blueStrong to-app-yellow";
+  if (n.includes("node") || n.includes("vite")) return "bg-gradient-to-br from-green-700 to-green-400";
+  return "bg-gradient-to-br from-app-border to-app-muted";
 }
 
 export function nowTimestamp() {

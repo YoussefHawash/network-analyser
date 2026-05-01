@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 import { formatRate, formatUptime } from "../lib/format";
+import { control, cx } from "../lib/styles";
 import type { Direction, EventTone, FilterState, MonitorSnapshot } from "../lib/types";
+import { SelectField } from "./SelectField";
 
 type Props = {
   filters: FilterState;
@@ -11,21 +13,31 @@ type Props = {
   onLogEvent: (tone: EventTone, html: string) => void;
 };
 
-export function Sidebar({ filters, snapshot, activeProcessCount, onChange, onReset, onLogEvent }: Props) {
+export function Sidebar({
+  filters,
+  snapshot,
+  activeProcessCount,
+  onChange,
+  onReset,
+  onLogEvent,
+}: Props) {
   const togglePause = () => onChange({ paused: !filters.paused });
 
   return (
-    <aside className="sidebar">
-      <section className="control-center" aria-label="Monitor controls">
-        <div className="sidebar-heading">
-          <div className="sidebar-section">Options</div>
-          <div className="sidebar-note">All values for the single dashboard page</div>
+    <aside className="flex w-[214px] shrink-0 flex-col overflow-y-auto border-r border-app-line bg-app-surface">
+      <section className="flex flex-col gap-2.5 p-3" aria-label="Monitor controls">
+        <div className="grid gap-0.5 px-0.5 pt-0.5">
+          <div className="text-[10px] font-bold uppercase tracking-[0.8px] text-app-subtle">
+            Options
+          </div>
+          <div className="text-[11px] leading-tight text-app-muted">
+            All values for the single dashboard page
+          </div>
         </div>
 
-        <div className="control-block">
+        <ControlBlock>
           <Row label="Time Range">
-            <select
-              className="control-select"
+            <SelectField
               value={filters.timeRange}
               onChange={(e) => onChange({ timeRange: e.target.value })}
             >
@@ -33,11 +45,11 @@ export function Sidebar({ filters, snapshot, activeProcessCount, onChange, onRes
               <option value="1h">Last 1 Hour</option>
               <option value="24h">Last 24 Hours</option>
               <option value="7d">Last 7 Days</option>
-            </select>
+            </SelectField>
           </Row>
+
           <Row label="Interface">
-            <select
-              className="control-select"
+            <SelectField
               value={filters.interfaceName}
               onChange={(e) => {
                 onChange({ interfaceName: e.target.value });
@@ -48,24 +60,24 @@ export function Sidebar({ filters, snapshot, activeProcessCount, onChange, onRes
               <option value="wlan0">wlan0</option>
               <option value="docker0">docker0</option>
               <option value="lo">lo</option>
-            </select>
+            </SelectField>
           </Row>
-        </div>
+        </ControlBlock>
 
-        <div className="control-block">
+        <ControlBlock>
           <Row label="Process or PID">
             <input
-              className="control-input"
+              className={control}
               type="text"
               placeholder="firefox, ssh, 1532"
               value={filters.processQuery}
               onChange={(e) => onChange({ processQuery: e.target.value })}
             />
           </Row>
-          <div className="control-grid">
+
+          <div className="grid grid-cols-2 gap-2">
             <Row label="User">
-              <select
-                className="control-select"
+              <SelectField
                 value={filters.user}
                 onChange={(e) => onChange({ user: e.target.value })}
               >
@@ -74,27 +86,32 @@ export function Sidebar({ filters, snapshot, activeProcessCount, onChange, onRes
                 <option value="bob">bob</option>
                 <option value="root">root</option>
                 <option value="system">system</option>
-              </select>
+              </SelectField>
             </Row>
+
             <Row label="Protocol">
-              <select
-                className="control-select"
+              <SelectField
                 value={filters.protocol}
                 onChange={(e) => onChange({ protocol: e.target.value })}
               >
                 <option value="all">All</option>
                 <option value="TCP">TCP</option>
                 <option value="UDP">UDP</option>
-              </select>
+              </SelectField>
             </Row>
           </div>
+
           <Row label="Traffic Direction">
-            <div className="segmented">
+            <div className="grid grid-cols-3 gap-1">
               {(["all", "inbound", "outbound"] as Direction[]).map((dir) => (
                 <button
                   key={dir}
                   type="button"
-                  className={filters.direction === dir ? "active" : ""}
+                  className={cx(
+                    "min-h-[26px] rounded-md border border-app-border bg-app-raised text-[11px] text-app-muted transition hover:border-app-blue/40 hover:text-app-text",
+                    filters.direction === dir &&
+                      "border-app-blue/40 bg-app-blueStrong/15 text-app-blue",
+                  )}
                   onClick={() => onChange({ direction: dir })}
                 >
                   {dir === "all" ? "All" : dir === "inbound" ? "↓ In" : "↑ Out"}
@@ -102,9 +119,10 @@ export function Sidebar({ filters, snapshot, activeProcessCount, onChange, onRes
               ))}
             </div>
           </Row>
+
           <Row label="Minimum Rate">
             <input
-              className="control-input"
+              className={control}
               type="number"
               min={0}
               step={0.5}
@@ -112,37 +130,36 @@ export function Sidebar({ filters, snapshot, activeProcessCount, onChange, onRes
               onChange={(e) => onChange({ minRate: Number(e.target.value) || 0 })}
             />
           </Row>
-        </div>
+        </ControlBlock>
 
-        <div className="control-block">
+        <ControlBlock>
           <Row label="History">
-            <select
-              className="control-select"
+            <SelectField
               value={filters.historyRange}
               onChange={(e) => onChange({ historyRange: e.target.value })}
             >
               <option value="24h">Last 24 Hours</option>
               <option value="7d">Last 7 Days</option>
               <option value="30d">Last 30 Days</option>
-            </select>
+            </SelectField>
           </Row>
-        </div>
+        </ControlBlock>
 
-        <div className="control-block">
+        <ControlBlock>
           <Row label="Refresh">
-            <select
-              className="control-select"
+            <SelectField
               value={filters.refreshMs}
               onChange={(e) => onChange({ refreshMs: Number(e.target.value) })}
             >
               <option value={500}>500 ms</option>
               <option value={1000}>1 sec</option>
               <option value={2000}>2 sec</option>
-            </select>
+            </SelectField>
           </Row>
+
           <Row label="Alert KB/s">
             <input
-              className="control-input"
+              className={control}
               type="number"
               min={1}
               step={1}
@@ -150,29 +167,52 @@ export function Sidebar({ filters, snapshot, activeProcessCount, onChange, onRes
               onChange={(e) => onChange({ alertThreshold: Number(e.target.value) || 1 })}
             />
           </Row>
-          <div className="filter-actions">
+
+          <div className="grid grid-cols-2 gap-1.5">
             <button
               type="button"
-              className={`btn-primary${filters.paused ? " is-paused" : ""}`}
+              className={cx(
+                "min-h-7 rounded-md border border-app-blueStrong bg-app-blueStrong text-[11px] font-semibold text-white transition hover:border-app-blue hover:bg-app-blue",
+                filters.paused &&
+                  "border-app-orange bg-app-orange hover:border-app-orangeDark hover:bg-app-orangeDark",
+              )}
               onClick={togglePause}
             >
               {filters.paused ? "Resume" : "Pause"}
             </button>
-            <button type="button" className="btn-secondary" onClick={onReset}>
+            <button
+              type="button"
+              className="min-h-7 rounded-md border border-app-border bg-transparent text-[11px] text-app-muted transition hover:border-app-blue/40 hover:bg-app-raised hover:text-app-text"
+              onClick={onReset}
+            >
               Reset
             </button>
           </div>
-        </div>
+        </ControlBlock>
       </section>
 
-      <section className="sidebar-status">
-        <div className="sidebar-section">System Status</div>
-        <StatRow label={<><span className="arrow-down">↓</span> Total RX Rate</>}
-                 value={`↓ ${formatRate(snapshot?.receivedRate ?? 0)}`}
-                 valueClass="arrow-down" />
-        <StatRow label={<><span className="arrow-up">↑</span> Total TX Rate</>}
-                 value={`↑ ${formatRate(snapshot?.sentRate ?? 0)}`}
-                 valueClass="arrow-up" />
+      <section className="mt-auto border-t border-app-line px-4 py-3">
+        <div className="text-[10px] font-bold uppercase tracking-[0.8px] text-app-subtle">
+          System Status
+        </div>
+        <StatRow
+          label={
+            <>
+              <span className="text-app-green">↓</span> Total RX Rate
+            </>
+          }
+          value={`↓ ${formatRate(snapshot?.receivedRate ?? 0)}`}
+          valueClass="text-app-green"
+        />
+        <StatRow
+          label={
+            <>
+              <span className="text-app-blue">↑</span> Total TX Rate
+            </>
+          }
+          value={`↑ ${formatRate(snapshot?.sentRate ?? 0)}`}
+          valueClass="text-app-blue"
+        />
         <StatRow label="Active Processes" value={String(activeProcessCount)} />
         <StatRow label="Monitoring Uptime" value={formatUptime(snapshot?.uptimeSeconds ?? 0)} />
       </section>
@@ -180,20 +220,40 @@ export function Sidebar({ filters, snapshot, activeProcessCount, onChange, onRes
   );
 }
 
-function Row({ label, children }: { label: string; children: ReactNode }) {
+function ControlBlock({ children }: { children: ReactNode }) {
   return (
-    <div className="control-row">
-      <label className="control-label">{label}</label>
+    <div className="flex flex-col gap-[7px] rounded-lg border border-app-line bg-app-surface p-[9px]">
       {children}
     </div>
   );
 }
 
-function StatRow({ label, value, valueClass }: { label: ReactNode; value: string; valueClass?: string }) {
+function Row({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="stat-row">
-      <span className="stat-label">{label}</span>
-      <span className={`stat-val${valueClass ? ` ${valueClass}` : ""}`}>{value}</span>
+    <div className="grid grid-cols-1 gap-1">
+      <label className="text-[11px] text-app-muted">{label}</label>
+      {children}
+    </div>
+  );
+}
+
+function StatRow({
+  label,
+  value,
+  valueClass,
+}: {
+  label: ReactNode;
+  value: string;
+  valueClass?: string;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-2 py-[3px]">
+      <span className="flex items-center gap-1.5 text-[11px] text-app-muted">
+        {label}
+      </span>
+      <span className={cx("whitespace-nowrap text-[11px] font-semibold tabular-nums text-app-text", valueClass)}>
+        {value}
+      </span>
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { formatRate, nowTimestamp, totalRate } from "../lib/format";
+import { cx, panel, panelHeader, panelSubtitle, panelTitle } from "../lib/styles";
 import {
   DEFAULT_FILTERS,
   type EventTone,
@@ -99,9 +100,9 @@ export function App() {
   }, [addEvent, filters.alertThreshold, filters.paused, snapshot]);
 
   return (
-    <div className="app-shell">
+    <div className="flex h-screen flex-col overflow-hidden bg-app-bg text-app-text">
       <TitleBar paused={filters.paused} />
-      <main className="main">
+      <main className="flex min-h-0 flex-1 overflow-hidden">
         <Sidebar
           filters={filters}
           snapshot={snapshot}
@@ -110,40 +111,26 @@ export function App() {
           onReset={reset}
           onLogEvent={addEvent}
         />
-        <section className="content">
+        <section className="flex min-w-0 flex-1 flex-col gap-3 overflow-y-auto p-3.5">
           <StatCards
             snapshot={snapshot}
             processes={filteredProcesses}
             connections={filteredConnections}
           />
 
-          <div className="mid-row">
-            <section className="panel">
-              <div className="panel-header">
+          <div className="grid grid-cols-[minmax(360px,0.95fr)_minmax(480px,1.25fr)] gap-3">
+            <section className={panel}>
+              <div className={panelHeader}>
                 <div>
-                  <div className="panel-title">Real-Time Traffic Flow</div>
-                  <div className="panel-subtitle">Bandwidth (KB/s)</div>
+                  <div className={panelTitle}>Real-Time Traffic Flow</div>
+                  <div className={panelSubtitle}>Bandwidth (KB/s)</div>
                 </div>
-                <div className="legend">
-                  <div className="legend-item">
-                    <div
-                      className="legend-line"
-                      style={{ background: "#3fb950" }}
-                    />{" "}
-                    Inbound
-                  </div>
-                  <div className="legend-item">
-                    <div
-                      className="legend-line"
-                      style={{ background: "#a78bfa" }}
-                    />{" "}
-                    Outbound
-                  </div>
+                <div className="flex flex-wrap gap-3">
+                  <Legend color="bg-app-green" label="Inbound" />
+                  <Legend color="bg-app-violet" label="Outbound" />
                 </div>
               </div>
-              <div className="canvas-wrap">
-                <TrafficChart history={trafficHistory} />
-              </div>
+              <TrafficChart history={trafficHistory} />
             </section>
 
             <ProcessTable
@@ -154,7 +141,7 @@ export function App() {
             />
           </div>
 
-          <div className="bottom-row">
+          <div className="grid grid-cols-[minmax(560px,1.15fr)_minmax(360px,0.85fr)] gap-3">
             <ConnectionTable
               connections={filteredConnections}
               sortKey={filters.connectionSort}
@@ -163,48 +150,21 @@ export function App() {
               }
             />
 
-            <section className="panel" id="history-panel">
-              <div className="panel-header">
+            <section className={panel}>
+              <div className={panelHeader}>
                 <div>
-                  <div className="panel-title">Interface History</div>
-                  <div className="panel-subtitle">
-                    {historyLabel(filters.historyRange)} for{" "}
-                    {filters.interfaceName}
+                  <div className={panelTitle}>Interface History</div>
+                  <div className={panelSubtitle}>
+                    {historyLabel(filters.historyRange)} for {filters.interfaceName}
                   </div>
                 </div>
-                <div className="legend">
-                  <div className="legend-item">
-                    <div
-                      className="legend-line"
-                      style={{
-                        background: "#3fb950",
-                        height: 10,
-                        width: 10,
-                        borderRadius: 2,
-                      }}
-                    />{" "}
-                    Received
-                  </div>
-                  <div className="legend-item">
-                    <div
-                      className="legend-line"
-                      style={{
-                        background: "#a78bfa",
-                        height: 10,
-                        width: 10,
-                        borderRadius: 2,
-                      }}
-                    />{" "}
-                    Sent
-                  </div>
+                <div className="flex flex-wrap gap-3">
+                  <Legend color="bg-app-green" label="Received" square />
+                  <Legend color="bg-app-violet" label="Sent" square />
                 </div>
               </div>
-              <div className="canvas-wrap">
-                <HistoryChart buckets={snapshot?.history ?? []} />
-              </div>
-              <HistoryAxis
-                labels={(snapshot?.history ?? []).map((b) => b.label)}
-              />
+              <HistoryChart buckets={snapshot?.history ?? []} />
+              <HistoryAxis labels={(snapshot?.history ?? []).map((bucket) => bucket.label)} />
             </section>
           </div>
 
@@ -215,27 +175,38 @@ export function App() {
   );
 }
 
-function HistoryAxis({ labels }: { labels: string[] }) {
-  if (labels.length === 0) {
-    return (
-      <div className="history-axis">
-        <span />
-        <span />
-        <span />
-        <span />
-        <span />
-      </div>
-    );
-  }
-  const ratios = [0, 0.25, 0.5, 0.75, 1];
-  const picked = ratios.map(
-    (r) =>
-      labels[Math.min(labels.length - 1, Math.round((labels.length - 1) * r))],
-  );
+function Legend({
+  color,
+  label,
+  square = false,
+}: {
+  color: string;
+  label: string;
+  square?: boolean;
+}) {
   return (
-    <div className="history-axis">
-      {picked.map((label, i) => (
-        <span key={i}>{label}</span>
+    <div className="flex items-center gap-1.5 whitespace-nowrap text-[11px] text-app-muted">
+      <div className={cx(color, square ? "h-2.5 w-2.5 rounded-sm" : "h-0.5 w-5 rounded-sm")} />
+      {label}
+    </div>
+  );
+}
+
+function HistoryAxis({ labels }: { labels: string[] }) {
+  const picked =
+    labels.length === 0
+      ? ["", "", "", "", ""]
+      : [0, 0.25, 0.5, 0.75, 1].map(
+          (ratio) =>
+            labels[
+              Math.min(labels.length - 1, Math.round((labels.length - 1) * ratio))
+            ],
+        );
+
+  return (
+    <div className="mt-1 flex justify-between px-1 text-[10px] text-app-subtle">
+      {picked.map((label, index) => (
+        <span key={`${label}-${index}`}>{label}</span>
       ))}
     </div>
   );
