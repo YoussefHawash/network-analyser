@@ -1,0 +1,85 @@
+export type Direction = "all" | "inbound" | "outbound";
+export type SortKey = "sent" | "received" | "total";
+
+export type ProcessTraffic = {
+  pid: number;
+  name: string;
+  icon: string;
+  user: string;
+  protocol: "TCP" | "UDP";
+  received: number;
+  sent: number;
+  history: number[];
+};
+
+export type ConnectionTraffic = {
+  remote: string;
+  flag: string;
+  port: number;
+  protocol: "TCP" | "UDP";
+  processName: string;
+  pid: number;
+  user: string;
+  received: number;
+  sent: number;
+  state: "ESTABLISHED" | "LISTEN" | "CLOSE_WAIT";
+};
+
+export type HistoryBucket = {
+  label: string;
+  received: number;
+  sent: number;
+};
+
+export type EventTone = "orange" | "blue" | "green";
+
+export type EventLogItem = {
+  id: number;
+  time: string;
+  tone: EventTone;
+  html: string;
+};
+
+export type MonitorSnapshot = {
+  interfaceName: string;
+  receivedRate: number;
+  sentRate: number;
+  receivedToday: number;
+  sentToday: number;
+  uptimeSeconds: number;
+  processes: ProcessTraffic[];
+  connections: ConnectionTraffic[];
+  history: HistoryBucket[];
+};
+
+export type FilterState = {
+  timeRange: string;
+  interfaceName: string;
+  processQuery: string;
+  user: string;
+  protocol: string;
+  direction: Direction;
+  minRate: number;
+  processSort: SortKey;
+  connectionSort: SortKey;
+  historyRange: string;
+  refreshMs: number;
+  alertThreshold: number;
+  paused: boolean;
+};
+
+export const DEFAULT_FILTERS: FilterState = {
+  timeRange: "live",
+  interfaceName: "eth0",
+  processQuery: "",
+  user: "all",
+  protocol: "all",
+  direction: "all",
+  minRate: 0,
+  processSort: "sent",
+  connectionSort: "total",
+  historyRange: "24h",
+  refreshMs: 1000,
+  alertThreshold: 18,
+  paused: false,
+};
