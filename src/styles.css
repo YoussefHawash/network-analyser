@@ -107,7 +107,9 @@ select {
   background: #21262d;
   color: #e6edf3;
   font-size: 12px;
-  transition: border-color 120ms ease, box-shadow 120ms ease;
+  transition:
+    border-color 120ms ease,
+    box-shadow 120ms ease;
 }
 
 .control-select {
@@ -159,7 +161,9 @@ select {
   border-radius: 50%;
   background: #3fb950;
   box-shadow: 0 0 0 4px #3fb95018;
-  transition: background-color 150ms ease, box-shadow 150ms ease;
+  transition:
+    background-color 150ms ease,
+    box-shadow 150ms ease;
 }
 
 .status-dot.paused .dot {
@@ -174,7 +178,10 @@ select {
   border-radius: 6px;
   background: #21262d;
   color: #7d8590;
-  transition: color 120ms ease, border-color 120ms ease, background-color 120ms ease;
+  transition:
+    color 120ms ease,
+    border-color 120ms ease,
+    background-color 120ms ease;
 }
 
 .icon-btn:hover {
@@ -272,7 +279,10 @@ select {
   background: #21262d;
   color: #7d8590;
   font-size: 11px;
-  transition: color 120ms ease, border-color 120ms ease, background-color 120ms ease;
+  transition:
+    color 120ms ease,
+    border-color 120ms ease,
+    background-color 120ms ease;
 }
 
 .segmented button:hover {
@@ -299,7 +309,10 @@ select {
   min-height: 28px;
   border-radius: 6px;
   font-size: 11px;
-  transition: color 120ms ease, border-color 120ms ease, background-color 120ms ease;
+  transition:
+    color 120ms ease,
+    border-color 120ms ease,
+    background-color 120ms ease;
 }
 
 .btn-primary {

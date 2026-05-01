@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { formatRate, formatUptime } from "../lib/format";
 import type { Direction, EventTone, FilterState, MonitorSnapshot } from "../lib/types";
 
@@ -179,7 +180,7 @@ export function Sidebar({ filters, snapshot, activeProcessCount, onChange, onRes
   );
 }
 
-function Row({ label, children }: { label: string; children: React.ReactNode }) {
+function Row({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="control-row">
       <label className="control-label">{label}</label>
@@ -188,7 +189,7 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
   );
 }
 
-function StatRow({ label, value, valueClass }: { label: React.ReactNode; value: string; valueClass?: string }) {
+function StatRow({ label, value, valueClass }: { label: ReactNode; value: string; valueClass?: string }) {
   return (
     <div className="stat-row">
       <span className="stat-label">{label}</span>
