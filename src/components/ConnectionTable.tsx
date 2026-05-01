@@ -1,6 +1,19 @@
 import { useState } from "react";
 import { formatRate } from "../lib/format";
-import { badge, cx, iconButton, mutedCell, numeric, panel, panelHeader, panelSubtitle, panelTitle, tableShell, td, th } from "../lib/styles";
+import {
+  badge,
+  cx,
+  iconButton,
+  mutedCell,
+  numeric,
+  panel,
+  panelHeader,
+  panelSubtitle,
+  panelTitle,
+  tableShell,
+  td,
+  th,
+} from "../lib/styles";
 import type { ConnectionTraffic, SortKey } from "../lib/types";
 import { SelectField } from "./SelectField";
 
@@ -129,9 +142,15 @@ function ConnectionRow({
           {connection.state}
         </span>
       </td>
-      <td className={td(compact, cx("text-app-green", numeric))}>{formatRate(connection.received)}</td>
-      <td className={td(compact, cx("text-app-blue", numeric))}>{formatRate(connection.sent)}</td>
-      <td className={td(compact, cx("font-semibold", numeric))}>{formatRate(connection.received + connection.sent)}</td>
+      <td className={td(compact, cx("text-app-green", numeric))}>
+        {formatRate(connection.received)}
+      </td>
+      <td className={td(compact, cx("text-app-blue", numeric))}>
+        {formatRate(connection.sent)}
+      </td>
+      <td className={td(compact, cx("font-semibold", numeric))}>
+        {formatRate(connection.received + connection.sent)}
+      </td>
     </tr>
   );
 }

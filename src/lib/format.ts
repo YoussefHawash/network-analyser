@@ -38,7 +38,7 @@ export function sortableConnectionValue(c: ConnectionTraffic, key: SortKey) {
 }
 
 export function processIconLabel(p: ProcessTraffic) {
-  return (p.icon || p.name.slice(0, 1) || "?").slice(0, 2).toUpperCase();
+  return (p.name.slice(0, 1) || "?").slice(0, 2).toUpperCase();
 }
 
 export function processIconClass(name: string) {

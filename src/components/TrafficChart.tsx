@@ -14,16 +14,47 @@ export function TrafficChart({ history }: Props) {
       const surface = prepareCanvas(canvas);
       if (!surface) return;
       const { ctx, width, height } = surface;
-      const maxValue = Math.max(12, ...history.received, ...history.sent) * 1.15;
-      const padLeft = 34, padRight = 12, padTop = 12, padBottom = 28;
+      const maxValue =
+        Math.max(12, ...history.received, ...history.sent) * 1.15;
+      const padLeft = 34,
+        padRight = 12,
+        padTop = 12,
+        padBottom = 28;
       const graphWidth = width - padLeft - padRight;
       const graphHeight = height - padTop - padBottom;
 
       ctx.clearRect(0, 0, width, height);
-      drawGrid(ctx, width, height, padLeft, padRight, padTop, padBottom, maxValue,
-               ["60s", "50s", "40s", "30s", "20s", "10s", "0s"]);
-      drawLine(ctx, history.received, "#3fb950", maxValue, padLeft, padTop, graphWidth, graphHeight);
-      drawLine(ctx, history.sent, "#a78bfa", maxValue, padLeft, padTop, graphWidth, graphHeight);
+      drawGrid(
+        ctx,
+        width,
+        height,
+        padLeft,
+        padRight,
+        padTop,
+        padBottom,
+        maxValue,
+        ["60s", "50s", "40s", "30s", "20s", "10s", "0s"],
+      );
+      drawLine(
+        ctx,
+        history.received,
+        "#3fb950",
+        maxValue,
+        padLeft,
+        padTop,
+        graphWidth,
+        graphHeight,
+      );
+      drawLine(
+        ctx,
+        history.sent,
+        "#a78bfa",
+        maxValue,
+        padLeft,
+        padTop,
+        graphWidth,
+        graphHeight,
+      );
     };
 
     draw();
@@ -31,7 +62,14 @@ export function TrafficChart({ history }: Props) {
     return () => window.removeEventListener("resize", draw);
   }, [history]);
 
-  return <canvas ref={ref} className="block h-[190px] w-full" width={520} height={190} />;
+  return (
+    <canvas
+      ref={ref}
+      className="block h-[full] w-full"
+      width={520}
+      height={240}
+    />
+  );
 }
 
 function prepareCanvas(canvas: HTMLCanvasElement) {
@@ -54,9 +92,14 @@ function prepareCanvas(canvas: HTMLCanvasElement) {
 
 function drawGrid(
   ctx: CanvasRenderingContext2D,
-  width: number, height: number,
-  padLeft: number, padRight: number, padTop: number, padBottom: number,
-  maxValue: number, labels: string[],
+  width: number,
+  height: number,
+  padLeft: number,
+  padRight: number,
+  padTop: number,
+  padBottom: number,
+  maxValue: number,
+  labels: string[],
 ) {
   const graphHeight = height - padTop - padBottom;
   const graphWidth = width - padLeft - padRight;
@@ -85,9 +128,14 @@ function drawGrid(
 }
 
 function drawLine(
-  ctx: CanvasRenderingContext2D, data: number[], color: string,
-  maxValue: number, padLeft: number, padTop: number,
-  graphWidth: number, graphHeight: number,
+  ctx: CanvasRenderingContext2D,
+  data: number[],
+  color: string,
+  maxValue: number,
+  padLeft: number,
+  padTop: number,
+  graphWidth: number,
+  graphHeight: number,
 ) {
   const x = (i: number) => padLeft + (i / (data.length - 1)) * graphWidth;
   const y = (v: number) => padTop + graphHeight - (v / maxValue) * graphHeight;

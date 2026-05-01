@@ -12,7 +12,13 @@ export function Sparkline({ values, color }: Props) {
     .join(" ");
 
   return (
-    <svg className="inline-block align-middle" width={44} height={18} viewBox="0 0 44 18" aria-hidden="true">
+    <svg
+      className="inline-block align-middle"
+      width={44}
+      height={18}
+      viewBox="0 0 44 18"
+      aria-hidden="true"
+    >
       <polyline points={points} fill="none" stroke={color} strokeWidth={1.5} />
     </svg>
   );

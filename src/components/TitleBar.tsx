@@ -5,16 +5,10 @@ type Props = { paused: boolean };
 export function TitleBar({ paused }: Props) {
   return (
     <header className="flex shrink-0 items-center gap-3 border-b border-app-line bg-app-surface px-4 py-2">
-      <div className="grid h-8 w-8 shrink-0 place-items-center rounded-md bg-gradient-to-br from-app-blueStrong to-app-blue text-base font-bold text-white">
-        NM
-      </div>
       <div>
         <h1 className="text-[15px] font-semibold text-app-text">
           Linux Network Monitor &amp; Controller
         </h1>
-        <p className="text-[11px] text-app-muted">
-          Real-time Traffic · Process Correlation · System Insights
-        </p>
       </div>
       <div className="ml-auto flex items-center gap-3.5">
         <div

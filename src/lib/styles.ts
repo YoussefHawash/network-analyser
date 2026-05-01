@@ -5,8 +5,7 @@ export function cx(...classes: Array<string | false | null | undefined>) {
 export const panel =
   "min-w-0 rounded-lg border border-app-line bg-app-surface p-4";
 
-export const panelHeader =
-  "mb-3 flex items-center justify-between gap-2.5";
+export const panelHeader = "mb-3 flex items-center justify-between gap-2.5";
 
 export const panelTitle = "text-[13px] font-semibold text-app-text";
 

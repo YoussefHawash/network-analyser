@@ -1,6 +1,18 @@
 import { useState } from "react";
-import { formatRate, processIconClass, processIconLabel, totalRate } from "../lib/format";
-import { badge, cx, iconButton, mutedCell, numeric, panel, panelHeader, panelSubtitle, panelTitle, tableShell, td, th } from "../lib/styles";
+import { formatRate, totalRate } from "../lib/format";
+import {
+  badge,
+  cx,
+  iconButton,
+  mutedCell,
+  numeric,
+  panel,
+  panelHeader,
+  panelTitle,
+  tableShell,
+  td,
+  th,
+} from "../lib/styles";
 import type { ProcessTraffic, SortKey } from "../lib/types";
 import { SelectField } from "./SelectField";
 import { Sparkline } from "./Sparkline";
@@ -25,7 +37,6 @@ export function ProcessTable({
       <div className={panelHeader}>
         <div>
           <div className={panelTitle}>Process Network Usage</div>
-          <div className={panelSubtitle}>Rows are rendered from the latest process array</div>
         </div>
         <div className="flex items-center gap-1.5 text-[11px] text-app-muted">
           <span>Sort by:</span>
@@ -86,7 +97,11 @@ export function ProcessTable({
               </tr>
             ) : (
               processes.map((process) => (
-                <ProcessRow key={process.pid} process={process} compact={compact} />
+                <ProcessRow
+                  key={process.pid}
+                  process={process}
+                  compact={compact}
+                />
               ))
             )}
           </tbody>
@@ -113,27 +128,28 @@ function ProcessRow({
     <tr className="group/row">
       <td className={td(compact, cx(mutedCell, numeric))}>{process.pid}</td>
       <td className={td(compact)}>
-        <div className="flex min-w-0 items-center gap-1.5 overflow-hidden text-ellipsis whitespace-nowrap font-semibold" title={process.name}>
-          <span
-            className={cx(
-              "inline-grid shrink-0 place-items-center rounded-md border border-white/15 text-center font-extrabold tracking-normal text-white",
-              compact ? "h-[18px] w-[18px] basis-[18px] text-[8px]" : "h-[22px] w-[22px] basis-[22px] text-[9px]",
-              processIconClass(process.name),
-            )}
-            aria-hidden="true"
-          >
-            {processIconLabel(process)}
+        <div
+          className="flex min-w-0 items-center gap-1.5 overflow-hidden text-ellipsis whitespace-nowrap font-semibold"
+          title={process.name}
+        >
+          <span className="overflow-hidden text-ellipsis whitespace-nowrap">
+            {process.name}
           </span>
-          <span className="overflow-hidden text-ellipsis whitespace-nowrap">{process.name}</span>
         </div>
       </td>
       <td className={td(compact, mutedCell)}>{process.user}</td>
       <td className={td(compact)}>
         <span className={badge}>{process.protocol}</span>
       </td>
-      <td className={td(compact, cx("text-app-green", numeric))}>{formatRate(process.received)}</td>
-      <td className={td(compact, cx("text-app-blue", numeric))}>{formatRate(process.sent)}</td>
-      <td className={td(compact, cx("font-semibold", numeric))}>{formatRate(totalRate(process))}</td>
+      <td className={td(compact, cx("text-app-green", numeric))}>
+        {formatRate(process.received)}
+      </td>
+      <td className={td(compact, cx("text-app-blue", numeric))}>
+        {formatRate(process.sent)}
+      </td>
+      <td className={td(compact, cx("font-semibold", numeric))}>
+        {formatRate(totalRate(process))}
+      </td>
       <td className={td(compact)}>
         <Sparkline values={process.history} color={trendColor} />
       </td>

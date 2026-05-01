@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { formatRate, formatUptime } from "../lib/format";
 import { control, cx } from "../lib/styles";
-import type { Direction, EventTone, FilterState, MonitorSnapshot } from "../lib/types";
+import type { Direction, FilterState, MonitorSnapshot } from "../lib/types";
 import { SelectField } from "./SelectField";
 
 type Props = {
@@ -9,8 +9,6 @@ type Props = {
   snapshot: MonitorSnapshot | null;
   activeProcessCount: number;
   onChange: (patch: Partial<FilterState>) => void;
-  onReset: () => void;
-  onLogEvent: (tone: EventTone, html: string) => void;
 };
 
 export function Sidebar({
@@ -18,25 +16,23 @@ export function Sidebar({
   snapshot,
   activeProcessCount,
   onChange,
-  onReset,
-  onLogEvent,
 }: Props) {
   const togglePause = () => onChange({ paused: !filters.paused });
 
   return (
     <aside className="flex w-[214px] shrink-0 flex-col overflow-y-auto border-r border-app-line bg-app-surface">
-      <section className="flex flex-col gap-2.5 p-3" aria-label="Monitor controls">
+      <section
+        className="flex flex-col gap-2.5 p-3"
+        aria-label="Monitor controls"
+      >
         <div className="grid gap-0.5 px-0.5 pt-0.5">
           <div className="text-[10px] font-bold uppercase tracking-[0.8px] text-app-subtle">
             Options
           </div>
-          <div className="text-[11px] leading-tight text-app-muted">
-            All values for the single dashboard page
-          </div>
         </div>
 
         <ControlBlock>
-          <Row label="Time Range">
+          {/* <Row label="Time Range">
             <SelectField
               value={filters.timeRange}
               onChange={(e) => onChange({ timeRange: e.target.value })}
@@ -46,20 +42,20 @@ export function Sidebar({
               <option value="24h">Last 24 Hours</option>
               <option value="7d">Last 7 Days</option>
             </SelectField>
-          </Row>
+          </Row> */}
 
           <Row label="Interface">
             <SelectField
               value={filters.interfaceName}
               onChange={(e) => {
                 onChange({ interfaceName: e.target.value });
-                onLogEvent("green", `Interface changed to <strong>${e.target.value}</strong>`);
               }}
             >
-              <option value="eth0">eth0</option>
-              <option value="wlan0">wlan0</option>
-              <option value="docker0">docker0</option>
-              <option value="lo">lo</option>
+              {snapshot?.availableInterfaces.map((iface) => (
+                <option key={iface} value={iface}>
+                  {iface}
+                </option>
+              )) || <option value="eth0">eth0</option>}
             </SelectField>
           </Row>
         </ControlBlock>
@@ -127,13 +123,15 @@ export function Sidebar({
               min={0}
               step={0.5}
               value={filters.minRate}
-              onChange={(e) => onChange({ minRate: Number(e.target.value) || 0 })}
+              onChange={(e) =>
+                onChange({ minRate: Number(e.target.value) || 0 })
+              }
             />
           </Row>
         </ControlBlock>
 
-        <ControlBlock>
-          <Row label="History">
+        {/* <ControlBlock>
+          {/* <Row label="History">
             <SelectField
               value={filters.historyRange}
               onChange={(e) => onChange({ historyRange: e.target.value })}
@@ -142,8 +140,8 @@ export function Sidebar({
               <option value="7d">Last 7 Days</option>
               <option value="30d">Last 30 Days</option>
             </SelectField>
-          </Row>
-        </ControlBlock>
+          </Row> */}
+        {/* </ControlBlock> */}
 
         <ControlBlock>
           <Row label="Refresh">
@@ -154,21 +152,24 @@ export function Sidebar({
               <option value={500}>500 ms</option>
               <option value={1000}>1 sec</option>
               <option value={2000}>2 sec</option>
+              <option value={5000}>5 sec</option>
             </SelectField>
           </Row>
 
-          <Row label="Alert KB/s">
+          {/* <Row label="Alert KB/s">
             <input
               className={control}
               type="number"
               min={1}
               step={1}
               value={filters.alertThreshold}
-              onChange={(e) => onChange({ alertThreshold: Number(e.target.value) || 1 })}
+              onChange={(e) =>
+                onChange({ alertThreshold: Number(e.target.value) || 1 })
+              }
             />
-          </Row>
+          </Row> */}
 
-          <div className="grid grid-cols-2 gap-1.5">
+          <div className="grid grid-cols-1 gap-1.5">
             <button
               type="button"
               className={cx(
@@ -179,13 +180,6 @@ export function Sidebar({
               onClick={togglePause}
             >
               {filters.paused ? "Resume" : "Pause"}
-            </button>
-            <button
-              type="button"
-              className="min-h-7 rounded-md border border-app-border bg-transparent text-[11px] text-app-muted transition hover:border-app-blue/40 hover:bg-app-raised hover:text-app-text"
-              onClick={onReset}
-            >
-              Reset
             </button>
           </div>
         </ControlBlock>
@@ -214,7 +208,10 @@ export function Sidebar({
           valueClass="text-app-blue"
         />
         <StatRow label="Active Processes" value={String(activeProcessCount)} />
-        <StatRow label="Monitoring Uptime" value={formatUptime(snapshot?.uptimeSeconds ?? 0)} />
+        <StatRow
+          label="Monitoring Uptime"
+          value={formatUptime(snapshot?.uptimeSeconds ?? 0)}
+        />
       </section>
     </aside>
   );
@@ -251,7 +248,12 @@ function StatRow({
       <span className="flex items-center gap-1.5 text-[11px] text-app-muted">
         {label}
       </span>
-      <span className={cx("whitespace-nowrap text-[11px] font-semibold tabular-nums text-app-text", valueClass)}>
+      <span
+        className={cx(
+          "whitespace-nowrap text-[11px] font-semibold tabular-nums text-app-text",
+          valueClass,
+        )}
+      >
         {value}
       </span>
     </div>

@@ -35,7 +35,9 @@ export function SelectField({
         viewBox="0 0 20 20"
         className={cx(
           "pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 transition-colors",
-          isSort ? "text-white/80 peer-focus:text-white" : "text-app-muted peer-focus:text-app-blue",
+          isSort
+            ? "text-white/80 peer-focus:text-white"
+            : "text-app-muted peer-focus:text-app-blue",
         )}
       >
         <path

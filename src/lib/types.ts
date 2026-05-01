@@ -4,7 +4,6 @@ export type SortKey = "sent" | "received" | "total";
 export type ProcessTraffic = {
   pid: number;
   name: string;
-  icon: string;
   user: string;
   protocol: "TCP" | "UDP";
   received: number;
@@ -31,16 +30,8 @@ export type HistoryBucket = {
   sent: number;
 };
 
-export type EventTone = "orange" | "blue" | "green";
-
-export type EventLogItem = {
-  id: number;
-  time: string;
-  tone: EventTone;
-  html: string;
-};
-
 export type MonitorSnapshot = {
+  availableInterfaces: string[];
   interfaceName: string;
   receivedRate: number;
   sentRate: number;
