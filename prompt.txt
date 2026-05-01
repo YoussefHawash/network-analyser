@@ -1,3 +1,0 @@
-make the pocess sort and connection sort on top or like beside the title of each of their cards just like the initial design ive sent before.
-
-also change the coloring a bit of all the page so that it matches the colors in the page.html initial reference we had , like match the current components in our design with the ones in the reference design we had and copy their coloring just the coloring not change anything else

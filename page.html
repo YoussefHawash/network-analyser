@@ -1,633 +1,1252 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Linux Network Monitor & Controller</title>
-<style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body {
-    background: #0d1117;
-    color: #e6edf3;
-    font-family: 'Segoe UI', system-ui, sans-serif;
-    font-size: 13px;
-    height: 100vh;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-  }
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Linux Ner\twork Monitor & Controller</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        background: #0d1117;
+        color: #e6edf3;
+        font-family: "Segoe UI", system-ui, sans-serif;
+        font-size: 13px;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
 
-  /* TITLE BAR */
-  .titlebar {
-    background: #161b22;
-    border-bottom: 1px solid #21262d;
-    padding: 8px 16px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    flex-shrink: 0;
-  }
-  .titlebar-logo {
-    width: 32px; height: 32px;
-    background: linear-gradient(135deg, #1f6feb, #388bfd);
-    border-radius: 6px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 16px;
-  }
-  .titlebar-info h1 { font-size: 15px; font-weight: 600; color: #e6edf3; }
-  .titlebar-info p { font-size: 11px; color: #7d8590; }
-  .titlebar-right { margin-left: auto; display: flex; align-items: center; gap: 14px; }
-  .interface-label { font-size: 12px; color: #7d8590; }
-  .interface-select {
-    background: #21262d; border: 1px solid #30363d; color: #e6edf3;
-    padding: 4px 10px; border-radius: 6px; font-size: 12px; cursor: pointer;
-  }
-  .status-dot { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #3fb950; }
-  .dot { width: 8px; height: 8px; border-radius: 50%; background: #3fb950; }
-  .win-btns { display: flex; gap: 8px; }
-  .win-btn {
-    width: 28px; height: 28px; border-radius: 6px; border: 1px solid #30363d;
-    background: #21262d; color: #7d8590; display: flex; align-items: center;
-    justify-content: center; cursor: pointer; font-size: 12px;
-  }
-  .win-btn.close:hover { background: #da3633; color: #fff; }
+      /* TITLE BAR */
+      .titlebar {
+        background: #161b22;
+        border-bottom: 1px solid #21262d;
+        padding: 8px 16px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-shrink: 0;
+      }
+      .titlebar-logo {
+        width: 32px;
+        height: 32px;
+        background: linear-gradient(135deg, #1f6feb, #388bfd);
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 16px;
+      }
+      .titlebar-info h1 {
+        font-size: 15px;
+        font-weight: 600;
+        color: #e6edf3;
+      }
+      .titlebar-info p {
+        font-size: 11px;
+        color: #7d8590;
+      }
+      .titlebar-right {
+        margin-left: auto;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+      .interface-label {
+        font-size: 12px;
+        color: #7d8590;
+      }
+      .interface-select {
+        background: #21262d;
+        border: 1px solid #30363d;
+        color: #e6edf3;
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: 12px;
+        cursor: pointer;
+      }
+      .status-dot {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        color: #3fb950;
+      }
+      .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #3fb950;
+      }
+      .win-btns {
+        display: flex;
+        gap: 8px;
+      }
+      .win-btn {
+        width: 28px;
+        height: 28px;
+        border-radius: 6px;
+        border: 1px solid #30363d;
+        background: #21262d;
+        color: #7d8590;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        font-size: 12px;
+      }
+      .win-btn.close:hover {
+        background: #da3633;
+        color: #fff;
+      }
 
-  /* MAIN LAYOUT */
-  .main { display: flex; flex: 1; overflow: hidden; }
+      /* MAIN LAYOUT */
+      .main {
+        display: flex;
+        flex: 1;
+        overflow: hidden;
+      }
 
-  /* SIDEBAR */
-  .sidebar {
-    width: 180px; background: #161b22; border-right: 1px solid #21262d;
-    padding: 12px 0; display: flex; flex-direction: column; flex-shrink: 0;
-    overflow-y: auto;
-  }
-  .nav-item {
-    padding: 9px 16px; display: flex; align-items: center; gap: 10px;
-    cursor: pointer; color: #7d8590; font-size: 13px; transition: all 0.15s;
-  }
-  .nav-item:hover { background: #21262d; color: #e6edf3; }
-  .nav-item.active { background: #1f6feb22; color: #388bfd; border-right: 2px solid #388bfd; }
-  .nav-icon { font-size: 14px; width: 16px; text-align: center; }
+      /* SIDEBAR */
+      .sidebar {
+        width: 180px;
+        background: #161b22;
+        border-right: 1px solid #21262d;
+        padding: 12px 0;
+        display: flex;
+        flex-direction: column;
+        flex-shrink: 0;
+        overflow-y: auto;
+      }
+      .nav-item {
+        padding: 9px 16px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        cursor: pointer;
+        color: #7d8590;
+        font-size: 13px;
+        transition: all 0.15s;
+      }
+      .nav-item:hover {
+        background: #21262d;
+        color: #e6edf3;
+      }
+      .nav-item.active {
+        background: #1f6feb22;
+        color: #388bfd;
+        border-right: 2px solid #388bfd;
+      }
+      .nav-icon {
+        font-size: 14px;
+        width: 16px;
+        text-align: center;
+      }
 
-  .sidebar-section { padding: 16px 16px 6px; font-size: 10px; color: #484f58; text-transform: uppercase; letter-spacing: 0.8px; font-weight: 600; }
+      .sidebar-section {
+        padding: 16px 16px 6px;
+        font-size: 10px;
+        color: #484f58;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        font-weight: 600;
+      }
 
-  .filter-group { padding: 6px 12px; }
-  .filter-label { font-size: 11px; color: #7d8590; margin-bottom: 4px; display: block; }
-  .filter-select, .filter-input {
-    width: 100%; background: #21262d; border: 1px solid #30363d; color: #e6edf3;
-    padding: 5px 8px; border-radius: 6px; font-size: 11px;
-  }
-  .filter-input::placeholder { color: #484f58; }
+      .filter-group {
+        padding: 6px 12px;
+      }
+      .filter-label {
+        font-size: 11px;
+        color: #7d8590;
+        margin-bottom: 4px;
+        display: block;
+      }
+      .filter-select,
+      .filter-input {
+        width: 100%;
+        background: #21262d;
+        border: 1px solid #30363d;
+        color: #e6edf3;
+        padding: 5px 8px;
+        border-radius: 6px;
+        font-size: 11px;
+      }
+      .filter-input::placeholder {
+        color: #484f58;
+      }
 
-  .filter-btns { padding: 6px 12px; display: flex; gap: 6px; }
-  .btn-apply {
-    flex: 1; padding: 6px; background: #1f6feb; color: #fff; border: none;
-    border-radius: 6px; font-size: 11px; cursor: pointer; font-weight: 500;
-  }
-  .btn-reset {
-    flex: 1; padding: 6px; background: transparent; color: #7d8590;
-    border: 1px solid #30363d; border-radius: 6px; font-size: 11px; cursor: pointer;
-  }
+      .filter-btns {
+        padding: 6px 12px;
+        display: flex;
+        gap: 6px;
+      }
+      .btn-apply {
+        flex: 1;
+        padding: 6px;
+        background: #1f6feb;
+        color: #fff;
+        border: none;
+        border-radius: 6px;
+        font-size: 11px;
+        cursor: pointer;
+        font-weight: 500;
+      }
+      .btn-reset {
+        flex: 1;
+        padding: 6px;
+        background: transparent;
+        color: #7d8590;
+        border: 1px solid #30363d;
+        border-radius: 6px;
+        font-size: 11px;
+        cursor: pointer;
+      }
 
-  .traffic-dir { padding: 6px 12px; }
-  .dir-btns { display: flex; gap: 4px; margin-top: 4px; }
-  .dir-btn {
-    flex: 1; padding: 4px 6px; background: #21262d; border: 1px solid #30363d;
-    color: #7d8590; border-radius: 5px; font-size: 11px; cursor: pointer; text-align: center;
-  }
-  .dir-btn.active { background: #1f6feb22; color: #388bfd; border-color: #388bfd44; }
+      .traffic-dir {
+        padding: 6px 12px;
+      }
+      .dir-btns {
+        display: flex;
+        gap: 4px;
+        margin-top: 4px;
+      }
+      .dir-btn {
+        flex: 1;
+        padding: 4px 6px;
+        background: #21262d;
+        border: 1px solid #30363d;
+        color: #7d8590;
+        border-radius: 5px;
+        font-size: 11px;
+        cursor: pointer;
+        text-align: center;
+      }
+      .dir-btn.active {
+        background: #1f6feb22;
+        color: #388bfd;
+        border-color: #388bfd44;
+      }
 
-  .sys-status { margin-top: auto; border-top: 1px solid #21262d; padding: 12px 16px; }
-  .sys-status-title { font-size: 10px; color: #484f58; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 8px; font-weight: 600; }
-  .stat-row { display: flex; justify-content: space-between; align-items: center; padding: 3px 0; }
-  .stat-label { font-size: 11px; color: #7d8590; display: flex; align-items: center; gap: 5px; }
-  .stat-val { font-size: 11px; color: #e6edf3; font-weight: 500; }
-  .arrow-down { color: #3fb950; }
-  .arrow-up { color: #388bfd; }
+      .sys-status {
+        margin-top: auto;
+        border-top: 1px solid #21262d;
+        padding: 12px 16px;
+      }
+      .sys-status-title {
+        font-size: 10px;
+        color: #484f58;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        margin-bottom: 8px;
+        font-weight: 600;
+      }
+      .stat-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 3px 0;
+      }
+      .stat-label {
+        font-size: 11px;
+        color: #7d8590;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+      }
+      .stat-val {
+        font-size: 11px;
+        color: #e6edf3;
+        font-weight: 500;
+      }
+      .arrow-down {
+        color: #3fb950;
+      }
+      .arrow-up {
+        color: #388bfd;
+      }
 
-  /* CONTENT */
-  .content { flex: 1; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 12px; }
+      /* CONTENT */
+      .content {
+        flex: 1;
+        overflow-y: auto;
+        padding: 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
 
-  /* STAT CARDS ROW */
-  .stat-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
-  .stat-card {
-    background: #161b22; border: 1px solid #21262d; border-radius: 10px;
-    padding: 14px 16px; display: flex; align-items: center; gap: 12px;
-  }
-  .stat-card-icon {
-    width: 38px; height: 38px; border-radius: 8px; display: flex;
-    align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0;
-  }
-  .ic-blue { background: #1f6feb22; }
-  .ic-purple { background: #8b5cf622; }
-  .ic-green { background: #3fb95022; }
-  .ic-orange { background: #f0883e22; }
-  .stat-card-info { flex: 1; min-width: 0; }
-  .stat-card-label { font-size: 10px; color: #7d8590; text-transform: uppercase; letter-spacing: 0.6px; font-weight: 600; margin-bottom: 2px; }
-  .stat-card-value { font-size: 22px; font-weight: 700; line-height: 1.1; }
-  .v-blue { color: #388bfd; }
-  .v-purple { color: #a78bfa; }
-  .v-green { color: #3fb950; }
-  .v-orange { color: #f0883e; }
-  .stat-card-sub { font-size: 11px; margin-top: 2px; }
-  .sub-down { color: #3fb950; }
-  .sub-up { color: #388bfd; }
+      /* STAT CARDS ROW */
+      .stat-cards {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 10px;
+      }
+      .stat-card {
+        background: #161b22;
+        border: 1px solid #21262d;
+        border-radius: 10px;
+        padding: 14px 16px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .stat-card-icon {
+        width: 38px;
+        height: 38px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+        flex-shrink: 0;
+      }
+      .ic-blue {
+        background: #1f6feb22;
+      }
+      .ic-purple {
+        background: #8b5cf622;
+      }
+      .ic-green {
+        background: #3fb95022;
+      }
+      .ic-orange {
+        background: #f0883e22;
+      }
+      .stat-card-info {
+        flex: 1;
+        min-width: 0;
+      }
+      .stat-card-label {
+        font-size: 10px;
+        color: #7d8590;
+        text-transform: uppercase;
+        letter-spacing: 0.6px;
+        font-weight: 600;
+        margin-bottom: 2px;
+      }
+      .stat-card-value {
+        font-size: 22px;
+        font-weight: 700;
+        line-height: 1.1;
+      }
+      .v-blue {
+        color: #388bfd;
+      }
+      .v-purple {
+        color: #a78bfa;
+      }
+      .v-green {
+        color: #3fb950;
+      }
+      .v-orange {
+        color: #f0883e;
+      }
+      .stat-card-sub {
+        font-size: 11px;
+        margin-top: 2px;
+      }
+      .sub-down {
+        color: #3fb950;
+      }
+      .sub-up {
+        color: #388bfd;
+      }
 
-  /* MIDDLE ROW */
-  .mid-row { display: grid; grid-template-columns: 1fr 1.1fr; gap: 12px; }
+      /* MIDDLE ROW */
+      .mid-row {
+        display: grid;
+        grid-template-columns: 1fr 1.1fr;
+        gap: 12px;
+      }
 
-  /* CHART PANEL */
-  .panel {
-    background: #161b22; border: 1px solid #21262d; border-radius: 10px;
-    padding: 14px 16px;
-  }
-  .panel-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-  .panel-title { font-size: 13px; font-weight: 600; color: #e6edf3; }
-  .legend { display: flex; gap: 12px; }
-  .legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: #7d8590; }
-  .legend-line { width: 20px; height: 2px; border-radius: 1px; }
+      /* CHART PANEL */
+      .panel {
+        background: #161b22;
+        border: 1px solid #21262d;
+        border-radius: 10px;
+        padding: 14px 16px;
+      }
+      .panel-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 12px;
+      }
+      .panel-title {
+        font-size: 13px;
+        font-weight: 600;
+        color: #e6edf3;
+      }
+      .legend {
+        display: flex;
+        gap: 12px;
+      }
+      .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 11px;
+        color: #7d8590;
+      }
+      .legend-line {
+        width: 20px;
+        height: 2px;
+        border-radius: 1px;
+      }
 
-  canvas { display: block; }
+      canvas {
+        display: block;
+      }
 
-  /* PROCESS TABLE */
-  .sort-row { display: flex; align-items: center; gap: 6px; }
-  .sort-label { font-size: 11px; color: #7d8590; }
-  .sort-select {
-    background: #1f6feb; border: none; color: #fff; padding: 3px 8px;
-    border-radius: 5px; font-size: 11px; cursor: pointer;
-  }
-  .icon-btn {
-    width: 24px; height: 24px; background: #21262d; border: 1px solid #30363d;
-    border-radius: 5px; display: flex; align-items: center; justify-content: center;
-    cursor: pointer; font-size: 10px; color: #7d8590;
-  }
+      /* PROCESS TABLE */
+      .sort-row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .sort-label {
+        font-size: 11px;
+        color: #7d8590;
+      }
+      .sort-select {
+        background: #1f6feb;
+        border: none;
+        color: #fff;
+        padding: 3px 8px;
+        border-radius: 5px;
+        font-size: 11px;
+        cursor: pointer;
+      }
+      .icon-btn {
+        width: 24px;
+        height: 24px;
+        background: #21262d;
+        border: 1px solid #30363d;
+        border-radius: 5px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        font-size: 10px;
+        color: #7d8590;
+      }
 
-  table { width: 100%; border-collapse: collapse; }
-  thead th {
-    font-size: 10px; color: #484f58; text-align: left; padding: 4px 6px;
-    text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;
-    border-bottom: 1px solid #21262d;
-  }
-  tbody td { padding: 7px 6px; font-size: 12px; border-bottom: 1px solid #21262d1a; }
-  tbody tr:last-child td { border-bottom: none; }
-  tbody tr:hover td { background: #21262d44; }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      thead th {
+        font-size: 10px;
+        color: #484f58;
+        text-align: left;
+        padding: 4px 6px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-weight: 600;
+        border-bottom: 1px solid #21262d;
+      }
+      tbody td {
+        padding: 7px 6px;
+        font-size: 12px;
+        border-bottom: 1px solid #21262d1a;
+      }
+      tbody tr:last-child td {
+        border-bottom: none;
+      }
+      tbody tr:hover td {
+        background: #21262d44;
+      }
 
-  .pid-col { color: #7d8590; }
-  .proc-name { display: flex; align-items: center; gap: 6px; font-weight: 500; }
-  .proc-icon { font-size: 14px; }
-  .rx-val { color: #3fb950; }
-  .tx-val { color: #388bfd; }
-  .total-val { color: #e6edf3; font-weight: 500; }
+      .pid-col {
+        color: #7d8590;
+      }
+      .proc-name {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-weight: 500;
+      }
+      .proc-icon {
+        font-size: 14px;
+      }
+      .rx-val {
+        color: #3fb950;
+      }
+      .tx-val {
+        color: #388bfd;
+      }
+      .total-val {
+        color: #e6edf3;
+        font-weight: 500;
+      }
 
-  /* Sparkline SVG inline */
-  .sparkline { display: inline-block; vertical-align: middle; }
+      /* Sparkline SVG inline */
+      .sparkline {
+        display: inline-block;
+        vertical-align: middle;
+      }
 
-  .table-footer { font-size: 11px; color: #484f58; margin-top: 8px; }
+      .table-footer {
+        font-size: 11px;
+        color: #484f58;
+        margin-top: 8px;
+      }
 
-  /* BOTTOM ROW */
-  .bottom-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+      /* BOTTOM ROW */
+      .bottom-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
 
-  /* CONNECTIONS */
-  .flag { font-size: 14px; }
-  .ip-col { font-weight: 500; }
-  .port-col { color: #7d8590; }
-  .proc-col { color: #7d8590; font-size: 11px; }
+      /* CONNECTIONS */
+      .flag {
+        font-size: 14px;
+      }
+      .ip-col {
+        font-weight: 500;
+      }
+      .port-col {
+        color: #7d8590;
+      }
+      .proc-col {
+        color: #7d8590;
+        font-size: 11px;
+      }
 
-  /* INTERFACE HISTORY */
-  .hist-controls { display: flex; gap: 6px; }
-  .hist-btn {
-    background: #1f6feb; border: none; color: #fff; padding: 3px 10px;
-    border-radius: 5px; font-size: 11px; cursor: pointer;
-  }
+      /* INTERFACE HISTORY */
+      .hist-controls {
+        display: flex;
+        gap: 6px;
+      }
+      .hist-btn {
+        background: #1f6feb;
+        border: none;
+        color: #fff;
+        padding: 3px 10px;
+        border-radius: 5px;
+        font-size: 11px;
+        cursor: pointer;
+      }
 
-  /* EVENT LOG */
-  .event-panel { background: #161b22; border: 1px solid #21262d; border-radius: 10px; padding: 14px 16px; }
-  .clear-btn {
-    background: transparent; border: 1px solid #30363d; color: #7d8590;
-    padding: 4px 10px; border-radius: 5px; font-size: 11px; cursor: pointer;
-    display: flex; align-items: center; gap: 5px;
-  }
-  .event-list { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
-  .event-row { display: flex; align-items: center; gap: 10px; padding: 4px 0; }
-  .event-time { color: #484f58; font-size: 11px; font-family: monospace; min-width: 44px; }
-  .event-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-  .ed-orange { background: #f0883e; }
-  .ed-blue { background: #388bfd; }
-  .ed-green { background: #3fb950; }
-  .event-text { font-size: 12px; color: #7d8590; }
-  .event-text strong { color: #e6edf3; }
-  .event-text .ev-val { color: #f0883e; }
-  .event-text .ev-blue { color: #388bfd; }
-</style>
-</head>
-<body>
-
-<!-- TITLE BAR -->
-<div class="titlebar">
-  <div class="titlebar-logo">📊</div>
-  <div class="titlebar-info">
-    <h1>Linux Network Monitor &amp; Controller</h1>
-    <p>Real-time Traffic · Process Correlation · System Insights</p>
-  </div>
-  <div class="titlebar-right">
-    <span class="interface-label">Interface:</span>
-    <select class="interface-select"><option>eth0</option><option>wlan0</option></select>
-    <div class="status-dot"><div class="dot"></div> Monitoring Active</div>
-    <div class="win-btns">
-      <div class="win-btn">⚙</div>
-      <div class="win-btn">—</div>
-      <div class="win-btn">□</div>
-      <div class="win-btn close">✕</div>
-    </div>
-  </div>
-</div>
-
-<div class="main">
-  <!-- SIDEBAR -->
-  <div class="sidebar">
-    <div class="nav-item active"><span class="nav-icon">⊞</span> Dashboard</div>
-    <div class="nav-item"><span class="nav-icon">👤</span> Process Monitor</div>
-    <div class="nav-item"><span class="nav-icon">≡</span> Interface History</div>
-    <div class="nav-item"><span class="nav-icon">⚙</span> Settings</div>
-
-    <div class="sidebar-section">Filters &amp; Controls</div>
-
-    <div class="filter-group">
-      <label class="filter-label">Time Range</label>
-      <select class="filter-select"><option>Live (Real-time)</option><option>Last 1 Hour</option><option>Last 24 Hours</option></select>
-    </div>
-    <div class="filter-group">
-      <label class="filter-label">Interface</label>
-      <select class="filter-select"><option>eth0</option><option>wlan0</option></select>
-    </div>
-    <div class="filter-group">
-      <label class="filter-label">Filter by Process</label>
-      <input class="filter-input" type="text" placeholder="Search process name or PID...">
-    </div>
-    <div class="filter-group">
-      <label class="filter-label">Filter by User</label>
-      <select class="filter-select"><option>All Users</option><option>alice</option><option>bob</option><option>root</option></select>
-    </div>
-    <div class="traffic-dir filter-group">
-      <label class="filter-label">Traffic Direction</label>
-      <div class="dir-btns">
-        <div class="dir-btn active">All</div>
-        <div class="dir-btn"><span style="color:#3fb950">↓</span> In</div>
-        <div class="dir-btn"><span style="color:#388bfd">↑</span> Out</div>
+      /* EVENT LOG */
+      .event-panel {
+        background: #161b22;
+        border: 1px solid #21262d;
+        border-radius: 10px;
+        padding: 14px 16px;
+      }
+      .clear-btn {
+        background: transparent;
+        border: 1px solid #30363d;
+        color: #7d8590;
+        padding: 4px 10px;
+        border-radius: 5px;
+        font-size: 11px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+      }
+      .event-list {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        margin-top: 8px;
+      }
+      .event-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 4px 0;
+      }
+      .event-time {
+        color: #484f58;
+        font-size: 11px;
+        font-family: monospace;
+        min-width: 44px;
+      }
+      .event-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        flex-shrink: 0;
+      }
+      .ed-orange {
+        background: #f0883e;
+      }
+      .ed-blue {
+        background: #388bfd;
+      }
+      .ed-green {
+        background: #3fb950;
+      }
+      .event-text {
+        font-size: 12px;
+        color: #7d8590;
+      }
+      .event-text strong {
+        color: #e6edf3;
+      }
+      .event-text .ev-val {
+        color: #f0883e;
+      }
+      .event-text .ev-blue {
+        color: #388bfd;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- TITLE BAR -->
+    <div class="titlebar">
+      <div class="titlebar-logo">📊</div>
+      <div class="titlebar-info">
+        <h1>Linux Network Monitor &amp; Controller</h1>
+        <p>Real-time Traffic · Process Correlation · System Insights</p>
       </div>
-    </div>
-    <div class="filter-btns">
-      <button class="btn-apply">⚡ Apply Filters</button>
-      <button class="btn-reset">↺ Reset</button>
-    </div>
-
-    <div class="sys-status">
-      <div class="sys-status-title">System Status</div>
-      <div class="stat-row">
-        <span class="stat-label"><span class="arrow-down">↓</span> Total RX Rate</span>
-        <span class="stat-val" style="color:#3fb950">↓ 12.5 KB/s</span>
-      </div>
-      <div class="stat-row">
-        <span class="stat-label"><span class="arrow-up">↑</span> Total TX Rate</span>
-        <span class="stat-val" style="color:#388bfd">8.3 KB/s</span>
-      </div>
-      <div class="stat-row">
-        <span class="stat-label">Active Processes</span>
-        <span class="stat-val">7</span>
-      </div>
-      <div class="stat-row">
-        <span class="stat-label">Monitoring Uptime</span>
-        <span class="stat-val">00:15:42</span>
-      </div>
-    </div>
-  </div>
-
-  <!-- CONTENT -->
-  <div class="content">
-
-    <!-- STAT CARDS -->
-    <div class="stat-cards">
-      <div class="stat-card">
-        <div class="stat-card-icon ic-blue">⬇</div>
-        <div class="stat-card-info">
-          <div class="stat-card-label">Total Received</div>
-          <div class="stat-card-value v-blue">12.5 KB/s</div>
-          <div class="stat-card-sub sub-down">▼ 1.2 MB today</div>
+      <div class="titlebar-right">
+        <span class="interface-label">Interface:</span>
+        <select class="interface-select">
+          <option>eth0</option>
+          <option>wlan0</option>
+        </select>
+        <div class="status-dot">
+          <div class="dot"></div>
+          Monitoring Active
+        </div>
+        <div class="win-btns">
+          <div class="win-btn">⚙</div>
+          <div class="win-btn">—</div>
+          <div class="win-btn">□</div>
+          <div class="win-btn close">✕</div>
         </div>
       </div>
-      <div class="stat-card">
-        <div class="stat-card-icon ic-purple">⬆</div>
-        <div class="stat-card-info">
-          <div class="stat-card-label">Total Sent</div>
-          <div class="stat-card-value v-purple">8.3 KB/s</div>
-          <div class="stat-card-sub sub-up">▲ 0.9 MB today</div>
-        </div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-card-icon ic-green">⊞</div>
-        <div class="stat-card-info">
-          <div class="stat-card-label">Active Processes</div>
-          <div class="stat-card-value v-green">7</div>
-          <div class="stat-card-sub" style="color:#7d8590">3 users</div>
-        </div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-card-icon ic-orange">⊕</div>
-        <div class="stat-card-info">
-          <div class="stat-card-label">Active Connections</div>
-          <div class="stat-card-value v-orange">12</div>
-          <div class="stat-card-sub" style="color:#7d8590">5 remote hosts</div>
-        </div>
-      </div>
     </div>
 
-    <!-- MID ROW: Chart + Process Table -->
-    <div class="mid-row">
-      <!-- TRAFFIC CHART -->
-      <div class="panel">
-        <div class="panel-header">
-          <div class="panel-title">Real-Time Traffic Flow</div>
-          <div class="legend">
-            <div class="legend-item"><div class="legend-line" style="background:#3fb950"></div> Inbound</div>
-            <div class="legend-item"><div class="legend-line" style="background:#a78bfa"></div> Outbound</div>
+    <div class="main">
+      <!-- SIDEBAR -->
+      <div class="sidebar">
+        <div class="nav-item active">
+          <span class="nav-icon">⊞</span> Dashboard
+        </div>
+        <div class="nav-item">
+          <span class="nav-icon">👤</span> Process Monitor
+        </div>
+        <div class="nav-item">
+          <span class="nav-icon">≡</span> Interface History
+        </div>
+        <div class="nav-item"><span class="nav-icon">⚙</span> Settings</div>
+
+        <div class="sidebar-section">Filters &amp; Controls</div>
+
+        <div class="filter-group">
+          <label class="filter-label">Time Range</label>
+          <select class="filter-select">
+            <option>Live (Real-time)</option>
+            <option>Last 1 Hour</option>
+            <option>Last 24 Hours</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label class="filter-label">Interface</label>
+          <select class="filter-select">
+            <option>eth0</option>
+            <option>wlan0</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label class="filter-label">Filter by Process</label>
+          <input
+            class="filter-input"
+            type="text"
+            placeholder="Search process name or PID..."
+          />
+        </div>
+        <div class="filter-group">
+          <label class="filter-label">Filter by User</label>
+          <select class="filter-select">
+            <option>All Users</option>
+            <option>alice</option>
+            <option>bob</option>
+            <option>root</option>
+          </select>
+        </div>
+        <div class="traffic-dir filter-group">
+          <label class="filter-label">Traffic Direction</label>
+          <div class="dir-btns">
+            <div class="dir-btn active">All</div>
+            <div class="dir-btn"><span style="color: #3fb950">↓</span> In</div>
+            <div class="dir-btn"><span style="color: #388bfd">↑</span> Out</div>
           </div>
         </div>
-        <div style="font-size:10px;color:#484f58;margin-bottom:4px">Bandwidth (KB/s)</div>
-        <canvas id="trafficChart" width="380" height="160"></canvas>
-      </div>
+        <div class="filter-btns">
+          <button class="btn-apply">⚡ Apply Filters</button>
+          <button class="btn-reset">↺ Reset</button>
+        </div>
 
-      <!-- PROCESS TABLE -->
-      <div class="panel">
-        <div class="panel-header">
-          <div class="panel-title">Process Network Usage</div>
-          <div class="sort-row">
-            <span class="sort-label">Sort by:</span>
-            <select class="sort-select"><option>▼ Sent</option><option>Received</option><option>Total</option></select>
-            <div class="icon-btn">≡</div>
+        <div class="sys-status">
+          <div class="sys-status-title">System Status</div>
+          <div class="stat-row">
+            <span class="stat-label"
+              ><span class="arrow-down">↓</span> Total RX Rate</span
+            >
+            <span class="stat-val" style="color: #3fb950">↓ 12.5 KB/s</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label"
+              ><span class="arrow-up">↑</span> Total TX Rate</span
+            >
+            <span class="stat-val" style="color: #388bfd">8.3 KB/s</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Active Processes</span>
+            <span class="stat-val">7</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Monitoring Uptime</span>
+            <span class="stat-val">00:15:42</span>
           </div>
         </div>
-        <table>
-          <thead>
-            <tr>
-              <th>PID</th><th>Process</th><th>User</th><th>Received</th><th>Sent</th><th>Total</th><th></th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td class="pid-col">1532</td>
-              <td><div class="proc-name"><span class="proc-icon">🦊</span> firefox</div></td>
-              <td style="color:#7d8590">alice</td>
-              <td class="rx-val">3.2 KB/s</td>
-              <td class="tx-val">5.1 KB/s</td>
-              <td class="total-val">8.3 KB/s</td>
-              <td><svg class="sparkline" width="40" height="18" viewBox="0 0 40 18"><polyline points="0,14 7,10 14,12 21,6 28,8 35,4 40,2" fill="none" stroke="#3fb950" stroke-width="1.5"/></svg></td>
-            </tr>
-            <tr>
-              <td class="pid-col">2451</td>
-              <td><div class="proc-name"><span class="proc-icon">🖥</span> ssh</div></td>
-              <td style="color:#7d8590">bob</td>
-              <td class="rx-val">1.1 KB/s</td>
-              <td class="tx-val">1.8 KB/s</td>
-              <td class="total-val">2.9 KB/s</td>
-              <td><svg class="sparkline" width="40" height="18" viewBox="0 0 40 18"><polyline points="0,10 7,12 14,8 21,10 28,7 35,9 40,6" fill="none" stroke="#3fb950" stroke-width="1.5"/></svg></td>
-            </tr>
-            <tr>
-              <td class="pid-col">3102</td>
-              <td><div class="proc-name"><span class="proc-icon">🔗</span> curl</div></td>
-              <td style="color:#7d8590">root</td>
-              <td class="rx-val">0.9 KB/s</td>
-              <td class="tx-val">0.7 KB/s</td>
-              <td class="total-val">1.6 KB/s</td>
-              <td><svg class="sparkline" width="40" height="18" viewBox="0 0 40 18"><polyline points="0,12 7,10 14,13 21,9 28,11 35,8 40,10" fill="none" stroke="#3fb950" stroke-width="1.5"/></svg></td>
-            </tr>
-            <tr>
-              <td class="pid-col">4120</td>
-              <td><div class="proc-name"><span class="proc-icon">📦</span> apt-get</div></td>
-              <td style="color:#7d8590">root</td>
-              <td class="rx-val">4.5 KB/s</td>
-              <td class="tx-val">0.3 KB/s</td>
-              <td class="total-val">4.8 KB/s</td>
-              <td><svg class="sparkline" width="40" height="18" viewBox="0 0 40 18"><polyline points="0,8 7,6 14,9 21,5 28,3 35,6 40,4" fill="none" stroke="#3fb950" stroke-width="1.5"/></svg></td>
-            </tr>
-            <tr>
-              <td class="pid-col">5211</td>
-              <td><div class="proc-name"><span class="proc-icon">🐳</span> docker</div></td>
-              <td style="color:#7d8590">alice</td>
-              <td class="rx-val">2.0 KB/s</td>
-              <td class="tx-val">0.2 KB/s</td>
-              <td class="total-val">2.2 KB/s</td>
-              <td><svg class="sparkline" width="40" height="18" viewBox="0 0 40 18"><polyline points="0,14 7,12 14,15 21,10 28,12 35,9 40,11" fill="none" stroke="#388bfd" stroke-width="1.5"/></svg></td>
-            </tr>
-          </tbody>
-        </table>
-        <div class="table-footer">Showing 5 of 7 active processes</div>
+      </div>
+
+      <!-- CONTENT -->
+      <div class="content">
+        <!-- STAT CARDS -->
+        <div class="stat-cards">
+          <div class="stat-card">
+            <div class="stat-card-icon ic-blue">⬇</div>
+            <div class="stat-card-info">
+              <div class="stat-card-label">Total Received</div>
+              <div class="stat-card-value v-blue">12.5 KB/s</div>
+              <div class="stat-card-sub sub-down">▼ 1.2 MB today</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-icon ic-purple">⬆</div>
+            <div class="stat-card-info">
+              <div class="stat-card-label">Total Sent</div>
+              <div class="stat-card-value v-purple">8.3 KB/s</div>
+              <div class="stat-card-sub sub-up">▲ 0.9 MB today</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-icon ic-green">⊞</div>
+            <div class="stat-card-info">
+              <div class="stat-card-label">Active Processes</div>
+              <div class="stat-card-value v-green">7</div>
+              <div class="stat-card-sub" style="color: #7d8590">3 users</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-icon ic-orange">⊕</div>
+            <div class="stat-card-info">
+              <div class="stat-card-label">Active Connections</div>
+              <div class="stat-card-value v-orange">12</div>
+              <div class="stat-card-sub" style="color: #7d8590">
+                5 remote hosts
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- MID ROW: Chart + Process Table -->
+        <div class="mid-row">
+          <!-- TRAFFIC CHART -->
+          <div class="panel">
+            <div class="panel-header">
+              <div class="panel-title">Real-Time Traffic Flow</div>
+              <div class="legend">
+                <div class="legend-item">
+                  <div class="legend-line" style="background: #3fb950"></div>
+                  Inbound
+                </div>
+                <div class="legend-item">
+                  <div class="legend-line" style="background: #a78bfa"></div>
+                  Outbound
+                </div>
+              </div>
+            </div>
+            <div style="font-size: 10px; color: #484f58; margin-bottom: 4px">
+              Bandwidth (KB/s)
+            </div>
+            <canvas id="trafficChart" width="380" height="160"></canvas>
+          </div>
+
+          <!-- PROCESS TABLE -->
+          <div class="panel">
+            <div class="panel-header">
+              <div class="panel-title">Process Network Usage</div>
+              <div class="sort-row">
+                <span class="sort-label">Sort by:</span>
+                <select class="sort-select">
+                  <option>▼ Sent</option>
+                  <option>Received</option>
+                  <option>Total</option>
+                </select>
+                <div class="icon-btn">≡</div>
+              </div>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>PID</th>
+                  <th>Process</th>
+                  <th>User</th>
+                  <th>Received</th>
+                  <th>Sent</th>
+                  <th>Total</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="pid-col">1532</td>
+                  <td>
+                    <div class="proc-name">
+                      <span class="proc-icon">🦊</span> firefox
+                    </div>
+                  </td>
+                  <td style="color: #7d8590">alice</td>
+                  <td class="rx-val">3.2 KB/s</td>
+                  <td class="tx-val">5.1 KB/s</td>
+                  <td class="total-val">8.3 KB/s</td>
+                  <td>
+                    <svg
+                      class="sparkline"
+                      width="40"
+                      height="18"
+                      viewBox="0 0 40 18"
+                    >
+                      <polyline
+                        points="0,14 7,10 14,12 21,6 28,8 35,4 40,2"
+                        fill="none"
+                        stroke="#3fb950"
+                        stroke-width="1.5"
+                      />
+                    </svg>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="pid-col">2451</td>
+                  <td>
+                    <div class="proc-name">
+                      <span class="proc-icon">🖥</span> ssh
+                    </div>
+                  </td>
+                  <td style="color: #7d8590">bob</td>
+                  <td class="rx-val">1.1 KB/s</td>
+                  <td class="tx-val">1.8 KB/s</td>
+                  <td class="total-val">2.9 KB/s</td>
+                  <td>
+                    <svg
+                      class="sparkline"
+                      width="40"
+                      height="18"
+                      viewBox="0 0 40 18"
+                    >
+                      <polyline
+                        points="0,10 7,12 14,8 21,10 28,7 35,9 40,6"
+                        fill="none"
+                        stroke="#3fb950"
+                        stroke-width="1.5"
+                      />
+                    </svg>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="pid-col">3102</td>
+                  <td>
+                    <div class="proc-name">
+                      <span class="proc-icon">🔗</span> curl
+                    </div>
+                  </td>
+                  <td style="color: #7d8590">root</td>
+                  <td class="rx-val">0.9 KB/s</td>
+                  <td class="tx-val">0.7 KB/s</td>
+                  <td class="total-val">1.6 KB/s</td>
+                  <td>
+                    <svg
+                      class="sparkline"
+                      width="40"
+                      height="18"
+                      viewBox="0 0 40 18"
+                    >
+                      <polyline
+                        points="0,12 7,10 14,13 21,9 28,11 35,8 40,10"
+                        fill="none"
+                        stroke="#3fb950"
+                        stroke-width="1.5"
+                      />
+                    </svg>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="pid-col">4120</td>
+                  <td>
+                    <div class="proc-name">
+                      <span class="proc-icon">📦</span> apt-get
+                    </div>
+                  </td>
+                  <td style="color: #7d8590">root</td>
+                  <td class="rx-val">4.5 KB/s</td>
+                  <td class="tx-val">0.3 KB/s</td>
+                  <td class="total-val">4.8 KB/s</td>
+                  <td>
+                    <svg
+                      class="sparkline"
+                      width="40"
+                      height="18"
+                      viewBox="0 0 40 18"
+                    >
+                      <polyline
+                        points="0,8 7,6 14,9 21,5 28,3 35,6 40,4"
+                        fill="none"
+                        stroke="#3fb950"
+                        stroke-width="1.5"
+                      />
+                    </svg>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="pid-col">5211</td>
+                  <td>
+                    <div class="proc-name">
+                      <span class="proc-icon">🐳</span> docker
+                    </div>
+                  </td>
+                  <td style="color: #7d8590">alice</td>
+                  <td class="rx-val">2.0 KB/s</td>
+                  <td class="tx-val">0.2 KB/s</td>
+                  <td class="total-val">2.2 KB/s</td>
+                  <td>
+                    <svg
+                      class="sparkline"
+                      width="40"
+                      height="18"
+                      viewBox="0 0 40 18"
+                    >
+                      <polyline
+                        points="0,14 7,12 14,15 21,10 28,12 35,9 40,11"
+                        fill="none"
+                        stroke="#388bfd"
+                        stroke-width="1.5"
+                      />
+                    </svg>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <div class="table-footer">Showing 5 of 7 active processes</div>
+          </div>
+        </div>
+
+        <!-- BOTTOM ROW -->
+        <div class="bottom-row">
+          <!-- CONNECTIONS -->
+          <div class="panel">
+            <div class="panel-header">
+              <div class="panel-title">Connections / Remote Hosts</div>
+              <div class="sort-row">
+                <span class="sort-label">Sort by:</span>
+                <select class="sort-select">
+                  <option>▼ Total Rate</option>
+                  <option>Received</option>
+                </select>
+                <div class="icon-btn">≡</div>
+              </div>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Remote IP</th>
+                  <th>Port</th>
+                  <th>Process (PID)</th>
+                  <th>User</th>
+                  <th>Received</th>
+                  <th>Sent</th>
+                  <th>Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>
+                    <span class="flag">🇺🇸</span>
+                    <span class="ip-col">142.250.72.14</span>
+                  </td>
+                  <td class="port-col">443</td>
+                  <td class="proc-col">firefox (1532)</td>
+                  <td style="color: #7d8590">alice</td>
+                  <td class="rx-val">2.8 KB/s</td>
+                  <td class="tx-val">4.9 KB/s</td>
+                  <td class="total-val">7.7 KB/s</td>
+                </tr>
+                <tr>
+                  <td>
+                    <span class="flag">🌐</span>
+                    <span class="ip-col">8.8.8.8</span>
+                  </td>
+                  <td class="port-col">53</td>
+                  <td class="proc-col">systemd-resolve (876)</td>
+                  <td style="color: #7d8590">system</td>
+                  <td class="rx-val">1.2 KB/s</td>
+                  <td class="tx-val">0.1 KB/s</td>
+                  <td class="total-val">1.3 KB/s</td>
+                </tr>
+                <tr>
+                  <td>
+                    <span class="flag">🇩🇪</span>
+                    <span class="ip-col">151.101.1.69</span>
+                  </td>
+                  <td class="port-col">22</td>
+                  <td class="proc-col">ssh (2451)</td>
+                  <td style="color: #7d8590">bob</td>
+                  <td class="rx-val">0.8 KB/s</td>
+                  <td class="tx-val">1.6 KB/s</td>
+                  <td class="total-val">2.4 KB/s</td>
+                </tr>
+                <tr>
+                  <td>
+                    <span class="flag">🌐</span>
+                    <span class="ip-col">archive.ubuntu.com</span>
+                  </td>
+                  <td class="port-col">80</td>
+                  <td class="proc-col">apt-get (4120)</td>
+                  <td style="color: #7d8590">root</td>
+                  <td class="rx-val">4.5 KB/s</td>
+                  <td class="tx-val">0.2 KB/s</td>
+                  <td class="total-val">4.7 KB/s</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- INTERFACE HISTORY -->
+          <div class="panel">
+            <div class="panel-header">
+              <div class="panel-title">Interface History (from vnStat)</div>
+              <div class="hist-controls">
+                <button class="hist-btn">Last 24 Hours ▼</button>
+              </div>
+            </div>
+            <div class="legend" style="margin-bottom: 8px">
+              <div class="legend-item">
+                <div
+                  class="legend-line"
+                  style="
+                    background: #3fb950;
+                    height: 10px;
+                    width: 10px;
+                    border-radius: 2px;
+                  "
+                ></div>
+                Received
+              </div>
+              <div class="legend-item">
+                <div
+                  class="legend-line"
+                  style="
+                    background: #a78bfa;
+                    height: 10px;
+                    width: 10px;
+                    border-radius: 2px;
+                  "
+                ></div>
+                Sent
+              </div>
+            </div>
+            <canvas id="histChart" width="340" height="130"></canvas>
+            <div
+              style="
+                display: flex;
+                justify-content: space-between;
+                font-size: 10px;
+                color: #484f58;
+                margin-top: 4px;
+                padding: 0 4px;
+              "
+            >
+              <span>00:00</span><span>06:00</span><span>12:00</span
+              ><span>18:00</span><span>24:00</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- EVENT LOG -->
+        <div class="event-panel">
+          <div class="panel-header">
+            <div class="panel-title">Event Log</div>
+            <button class="clear-btn">🗑 Clear Log</button>
+          </div>
+          <div class="event-list">
+            <div class="event-row">
+              <span class="event-time">12:32:15</span>
+              <div class="event-dot ed-orange"></div>
+              <span class="event-text"
+                >🦊 <strong>firefox (PID 1532)</strong> High bandwidth usage
+                detected: <span class="ev-val">5.1 KB/s</span> sent</span
+              >
+            </div>
+            <div class="event-row">
+              <span class="event-time">12:30:02</span>
+              <div class="event-dot ed-blue"></div>
+              <span class="event-text"
+                >🖥 <strong>ssh connection established to</strong>
+                <span class="ev-blue">151.101.1.69</span></span
+              >
+            </div>
+            <div class="event-row">
+              <span class="event-time">12:28:47</span>
+              <div class="event-dot ed-green"></div>
+              <span class="event-text"
+                >Monitoring started on interface <strong>eth0</strong></span
+              >
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
-    <!-- BOTTOM ROW -->
-    <div class="bottom-row">
-      <!-- CONNECTIONS -->
-      <div class="panel">
-        <div class="panel-header">
-          <div class="panel-title">Connections / Remote Hosts</div>
-          <div class="sort-row">
-            <span class="sort-label">Sort by:</span>
-            <select class="sort-select"><option>▼ Total Rate</option><option>Received</option></select>
-            <div class="icon-btn">≡</div>
-          </div>
-        </div>
-        <table>
-          <thead>
-            <tr>
-              <th>Remote IP</th><th>Port</th><th>Process (PID)</th><th>User</th><th>Received</th><th>Sent</th><th>Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><span class="flag">🇺🇸</span> <span class="ip-col">142.250.72.14</span></td>
-              <td class="port-col">443</td>
-              <td class="proc-col">firefox (1532)</td>
-              <td style="color:#7d8590">alice</td>
-              <td class="rx-val">2.8 KB/s</td>
-              <td class="tx-val">4.9 KB/s</td>
-              <td class="total-val">7.7 KB/s</td>
-            </tr>
-            <tr>
-              <td><span class="flag">🌐</span> <span class="ip-col">8.8.8.8</span></td>
-              <td class="port-col">53</td>
-              <td class="proc-col">systemd-resolve (876)</td>
-              <td style="color:#7d8590">system</td>
-              <td class="rx-val">1.2 KB/s</td>
-              <td class="tx-val">0.1 KB/s</td>
-              <td class="total-val">1.3 KB/s</td>
-            </tr>
-            <tr>
-              <td><span class="flag">🇩🇪</span> <span class="ip-col">151.101.1.69</span></td>
-              <td class="port-col">22</td>
-              <td class="proc-col">ssh (2451)</td>
-              <td style="color:#7d8590">bob</td>
-              <td class="rx-val">0.8 KB/s</td>
-              <td class="tx-val">1.6 KB/s</td>
-              <td class="total-val">2.4 KB/s</td>
-            </tr>
-            <tr>
-              <td><span class="flag">🌐</span> <span class="ip-col">archive.ubuntu.com</span></td>
-              <td class="port-col">80</td>
-              <td class="proc-col">apt-get (4120)</td>
-              <td style="color:#7d8590">root</td>
-              <td class="rx-val">4.5 KB/s</td>
-              <td class="tx-val">0.2 KB/s</td>
-              <td class="total-val">4.7 KB/s</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+    <script>
+      // Real-time traffic chart
+      (function () {
+        const canvas = document.getElementById("trafficChart");
+        const ctx = canvas.getContext("2d");
+        const W = canvas.width,
+          H = canvas.height;
+        const inData = [
+          4, 5, 6, 5, 7, 6, 8, 7, 9, 8, 7, 9, 8, 10, 9, 8, 9, 10, 11, 10, 9, 10,
+          11, 10,
+        ];
+        const outData = [
+          2, 3, 2, 4, 3, 5, 4, 3, 4, 5, 4, 3, 4, 3, 5, 4, 5, 4, 5, 6, 5, 6, 5,
+          7,
+        ];
+        const labels = ["60s", "50s", "40s", "30s", "20s", "10s", "0s"];
+        const maxVal = 12;
+        const padL = 28,
+          padR = 10,
+          padT = 10,
+          padB = 28;
+        const gW = W - padL - padR,
+          gH = H - padT - padB;
 
-      <!-- INTERFACE HISTORY -->
-      <div class="panel">
-        <div class="panel-header">
-          <div class="panel-title">Interface History (from vnStat)</div>
-          <div class="hist-controls">
-            <button class="hist-btn">Last 24 Hours ▼</button>
-          </div>
-        </div>
-        <div class="legend" style="margin-bottom:8px">
-          <div class="legend-item"><div class="legend-line" style="background:#3fb950;height:10px;width:10px;border-radius:2px"></div> Received</div>
-          <div class="legend-item"><div class="legend-line" style="background:#a78bfa;height:10px;width:10px;border-radius:2px"></div> Sent</div>
-        </div>
-        <canvas id="histChart" width="340" height="130"></canvas>
-        <div style="display:flex;justify-content:space-between;font-size:10px;color:#484f58;margin-top:4px;padding:0 4px">
-          <span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>24:00</span>
-        </div>
-      </div>
-    </div>
+        function x(i) {
+          return padL + (i / (inData.length - 1)) * gW;
+        }
+        function y(v) {
+          return padT + gH - (v / maxVal) * gH;
+        }
 
-    <!-- EVENT LOG -->
-    <div class="event-panel">
-      <div class="panel-header">
-        <div class="panel-title">Event Log</div>
-        <button class="clear-btn">🗑 Clear Log</button>
-      </div>
-      <div class="event-list">
-        <div class="event-row">
-          <span class="event-time">12:32:15</span>
-          <div class="event-dot ed-orange"></div>
-          <span class="event-text">🦊 <strong>firefox (PID 1532)</strong> High bandwidth usage detected: <span class="ev-val">5.1 KB/s</span> sent</span>
-        </div>
-        <div class="event-row">
-          <span class="event-time">12:30:02</span>
-          <div class="event-dot ed-blue"></div>
-          <span class="event-text">🖥 <strong>ssh connection established to</strong> <span class="ev-blue">151.101.1.69</span></span>
-        </div>
-        <div class="event-row">
-          <span class="event-time">12:28:47</span>
-          <div class="event-dot ed-green"></div>
-          <span class="event-text">Monitoring started on interface <strong>eth0</strong></span>
-        </div>
-      </div>
-    </div>
+        function drawGrid() {
+          ctx.strokeStyle = "#21262d";
+          ctx.lineWidth = 0.5;
+          for (let v = 0; v <= maxVal; v += 2) {
+            const yy = y(v);
+            ctx.beginPath();
+            ctx.moveTo(padL, yy);
+            ctx.lineTo(padL + gW, yy);
+            ctx.stroke();
+            ctx.fillStyle = "#484f58";
+            ctx.font = "10px sans-serif";
+            ctx.textAlign = "right";
+            ctx.fillText(v, padL - 4, yy + 3);
+          }
+          // x axis labels
+          ctx.textAlign = "center";
+          labels.forEach((l, i) => {
+            const xp = padL + (i / (labels.length - 1)) * gW;
+            ctx.fillText(l, xp, H - 6);
+          });
+        }
 
-  </div>
-</div>
+        function drawLine(data, color) {
+          ctx.beginPath();
+          data.forEach((v, i) => {
+            i === 0 ? ctx.moveTo(x(i), y(v)) : ctx.lineTo(x(i), y(v));
+          });
+          ctx.strokeStyle = color;
+          ctx.lineWidth = 2;
+          ctx.stroke();
 
-<script>
-// Real-time traffic chart
-(function() {
-  const canvas = document.getElementById('trafficChart');
-  const ctx = canvas.getContext('2d');
-  const W = canvas.width, H = canvas.height;
-  const inData = [4,5,6,5,7,6,8,7,9,8,7,9,8,10,9,8,9,10,11,10,9,10,11,10];
-  const outData = [2,3,2,4,3,5,4,3,4,5,4,3,4,3,5,4,5,4,5,6,5,6,5,7];
-  const labels = ['60s','50s','40s','30s','20s','10s','0s'];
-  const maxVal = 12;
-  const padL = 28, padR = 10, padT = 10, padB = 28;
-  const gW = W - padL - padR, gH = H - padT - padB;
+          // fill
+          ctx.lineTo(x(data.length - 1), y(0));
+          ctx.lineTo(x(0), y(0));
+          ctx.closePath();
+          const grad = ctx.createLinearGradient(0, padT, 0, padT + gH);
+          grad.addColorStop(0, color + "40");
+          grad.addColorStop(1, color + "05");
+          ctx.fillStyle = grad;
+          ctx.fill();
+        }
 
-  function x(i) { return padL + (i / (inData.length-1)) * gW; }
-  function y(v) { return padT + gH - (v / maxVal) * gH; }
+        drawGrid();
+        drawLine(outData, "#a78bfa");
+        drawLine(inData, "#3fb950");
+      })();
 
-  function drawGrid() {
-    ctx.strokeStyle = '#21262d';
-    ctx.lineWidth = 0.5;
-    for (let v = 0; v <= maxVal; v += 2) {
-      const yy = y(v);
-      ctx.beginPath(); ctx.moveTo(padL, yy); ctx.lineTo(padL+gW, yy); ctx.stroke();
-      ctx.fillStyle = '#484f58'; ctx.font = '10px sans-serif'; ctx.textAlign = 'right';
-      ctx.fillText(v, padL-4, yy+3);
-    }
-    // x axis labels
-    ctx.textAlign = 'center';
-    labels.forEach((l, i) => {
-      const xp = padL + (i / (labels.length-1)) * gW;
-      ctx.fillText(l, xp, H - 6);
-    });
-  }
+      // Interface history bar chart
+      (function () {
+        const canvas = document.getElementById("histChart");
+        const ctx = canvas.getContext("2d");
+        const W = canvas.width,
+          H = canvas.height;
+        const received = [
+          80, 120, 60, 90, 200, 150, 180, 90, 110, 130, 80, 250,
+        ];
+        const sent = [40, 80, 30, 60, 120, 80, 100, 50, 70, 90, 50, 140];
+        const n = received.length;
+        const padL = 24,
+          padR = 8,
+          padT = 8,
+          padB = 8;
+        const gW = W - padL - padR,
+          gH = H - padT - padB;
+        const maxVal = 260;
+        const barW = (gW / n) * 0.35;
+        const gap = (gW / n) * 0.15;
 
-  function drawLine(data, color) {
-    ctx.beginPath();
-    data.forEach((v, i) => { i === 0 ? ctx.moveTo(x(i), y(v)) : ctx.lineTo(x(i), y(v)); });
-    ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.stroke();
+        // grid
+        ctx.strokeStyle = "#21262d";
+        ctx.lineWidth = 0.5;
+        [0, 50, 100, 150, 200, 250].forEach((v) => {
+          const yy = padT + gH - (v / maxVal) * gH;
+          ctx.beginPath();
+          ctx.moveTo(padL, yy);
+          ctx.lineTo(padL + gW, yy);
+          ctx.stroke();
+          ctx.fillStyle = "#484f58";
+          ctx.font = "9px sans-serif";
+          ctx.textAlign = "right";
+          ctx.fillText(v, padL - 2, yy + 3);
+        });
 
-    // fill
-    ctx.lineTo(x(data.length-1), y(0));
-    ctx.lineTo(x(0), y(0));
-    ctx.closePath();
-    const grad = ctx.createLinearGradient(0, padT, 0, padT+gH);
-    grad.addColorStop(0, color + '40');
-    grad.addColorStop(1, color + '05');
-    ctx.fillStyle = grad; ctx.fill();
-  }
+        received.forEach((rv, i) => {
+          const sv = sent[i];
+          const cx = padL + (i / n) * gW + gW / (n * 2);
+          const rxH = (rv / maxVal) * gH;
+          const sxH = (sv / maxVal) * gH;
 
-  drawGrid();
-  drawLine(outData, '#a78bfa');
-  drawLine(inData, '#3fb950');
-})();
+          ctx.fillStyle = "#3fb950cc";
+          ctx.fillRect(cx - barW - gap / 2, padT + gH - rxH, barW, rxH);
 
-// Interface history bar chart
-(function() {
-  const canvas = document.getElementById('histChart');
-  const ctx = canvas.getContext('2d');
-  const W = canvas.width, H = canvas.height;
-  const received = [80, 120, 60, 90, 200, 150, 180, 90, 110, 130, 80, 250];
-  const sent = [40, 80, 30, 60, 120, 80, 100, 50, 70, 90, 50, 140];
-  const n = received.length;
-  const padL = 24, padR = 8, padT = 8, padB = 8;
-  const gW = W - padL - padR, gH = H - padT - padB;
-  const maxVal = 260;
-  const barW = (gW / n) * 0.35;
-  const gap = (gW / n) * 0.15;
+          ctx.fillStyle = "#a78bfa99";
+          ctx.fillRect(cx + gap / 2, padT + gH - sxH, barW, sxH);
+        });
+      })();
 
-  // grid
-  ctx.strokeStyle = '#21262d'; ctx.lineWidth = 0.5;
-  [0, 50, 100, 150, 200, 250].forEach(v => {
-    const yy = padT + gH - (v / maxVal) * gH;
-    ctx.beginPath(); ctx.moveTo(padL, yy); ctx.lineTo(padL+gW, yy); ctx.stroke();
-    ctx.fillStyle = '#484f58'; ctx.font = '9px sans-serif'; ctx.textAlign = 'right';
-    ctx.fillText(v, padL-2, yy+3);
-  });
-
-  received.forEach((rv, i) => {
-    const sv = sent[i];
-    const cx = padL + (i / n) * gW + gW/(n*2);
-    const rxH = (rv / maxVal) * gH;
-    const sxH = (sv / maxVal) * gH;
-
-    ctx.fillStyle = '#3fb950cc';
-    ctx.fillRect(cx - barW - gap/2, padT + gH - rxH, barW, rxH);
-
-    ctx.fillStyle = '#a78bfa99';
-    ctx.fillRect(cx + gap/2, padT + gH - sxH, barW, sxH);
-  });
-})();
-
-// Animate traffic numbers
-let t = 0;
-setInterval(() => {
-  t++;
-  const rx = (12 + Math.sin(t*0.3)*1.5).toFixed(1);
-  const tx = (8 + Math.sin(t*0.4+1)*1.2).toFixed(1);
-  // subtle value pulse
-}, 1500);
-</script>
-</body>
+      // Animate traffic numbers
+      let t = 0;
+      setInterval(() => {
+        t++;
+        const rx = (12 + Math.sin(t * 0.3) * 1.5).toFixed(1);
+        const tx = (8 + Math.sin(t * 0.4 + 1) * 1.2).toFixed(1);
+        // subtle value pulse
+      }, 1500);
+    </script>
+  </body>
 </html>
+t

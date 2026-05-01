@@ -97,6 +97,9 @@ let latestSnapshot: MonitorSnapshot | null = null;
 let tick = 0;
 let eventId = 4;
 let timerId = 0;
+let uptimeStartedAt = performance.now();
+let pausedAccumulated = 0;
+let pausedAt: number | null = null;
 
 const events: EventLogItem[] = [
   {
@@ -208,13 +211,7 @@ app.innerHTML = `
         <p>Real-time Traffic &middot; Process Correlation &middot; System Insights</p>
       </div>
       <div class="titlebar-right">
-        <div class="status-dot"><div class="dot"></div><span id="monitor-status">Monitoring Active</span></div>
-        <div class="window-actions" aria-hidden="true">
-          <div class="win-btn">&#9881;</div>
-          <div class="win-btn">-</div>
-          <div class="win-btn">[]</div>
-          <div class="win-btn close">x</div>
-        </div>
+        <div id="status-dot" class="status-dot"><div class="dot"></div><span id="monitor-status">Monitoring Active</span></div>
       </div>
     </header>
 
@@ -404,7 +401,7 @@ app.innerHTML = `
                   <option value="received">Received</option>
                   <option value="total">Total</option>
                 </select>
-                <button class="icon-btn" type="button" title="Process rows are dynamic">&#8801;</button>
+                <button id="process-density" class="icon-btn" type="button" title="Toggle compact rows" aria-pressed="false">&#8801;</button>
               </div>
             </div>
             <div class="table-wrap table-scroll process-scroll">
@@ -452,7 +449,7 @@ app.innerHTML = `
                   <option value="received">Received</option>
                   <option value="sent">Sent</option>
                 </select>
-                <button class="icon-btn" type="button" title="Connection rows are dynamic">&#8801;</button>
+                <button id="connection-density" class="icon-btn" type="button" title="Toggle compact rows" aria-pressed="false">&#8801;</button>
               </div>
             </div>
             <div class="table-wrap table-scroll connection-scroll">
@@ -537,12 +534,22 @@ const elements = {
   pauseButton: getButton("pause-button"),
   resetButton: getButton("reset-button"),
   clearEvents: getButton("clear-events"),
+  processDensity: getButton("process-density"),
+  connectionDensity: getButton("connection-density"),
+  processPanel: byId("process-panel"),
+  connectionPanel: byId("connection-panel"),
+  statusDot: byId("status-dot"),
   directionButtons: document.querySelectorAll<HTMLButtonElement>("#direction-buttons button"),
   trafficChart: getCanvas("traffic-chart"),
   historyChart: getCanvas("history-chart"),
 };
 
+const processRowCache = new Map<number, HTMLTableRowElement>();
+const connectionRowCache = new Map<string, HTMLTableRowElement>();
+
+syncControlsFromState();
 bindControls();
+setupCanvasResize();
 startLoop();
 refresh();
 
@@ -604,10 +611,7 @@ function bindControls() {
   });
 
   elements.pauseButton.addEventListener("click", () => {
-    state.paused = !state.paused;
-    elements.pauseButton.textContent = state.paused ? "Resume" : "Pause";
-    byId("monitor-status").textContent = state.paused ? "Monitoring Paused" : "Monitoring Active";
-    render();
+    setPaused(!state.paused);
   });
 
   elements.resetButton.addEventListener("click", () => {
@@ -620,6 +624,16 @@ function bindControls() {
     renderEvents();
   });
 
+  elements.processDensity.addEventListener("click", () => {
+    const compact = elements.processPanel.classList.toggle("compact");
+    elements.processDensity.setAttribute("aria-pressed", String(compact));
+  });
+
+  elements.connectionDensity.addEventListener("click", () => {
+    const compact = elements.connectionPanel.classList.toggle("compact");
+    elements.connectionDensity.setAttribute("aria-pressed", String(compact));
+  });
+
   elements.directionButtons.forEach((button) => {
     button.addEventListener("click", () => {
       state.direction = button.dataset.direction as Direction;
@@ -627,15 +641,67 @@ function bindControls() {
       render();
     });
   });
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) {
+      window.clearInterval(timerId);
+      timerId = 0;
+    } else if (!state.paused) {
+      startLoop();
+    }
+  });
+}
+
+function setPaused(paused: boolean) {
+  if (paused === state.paused) {
+    return;
+  }
+
+  state.paused = paused;
+
+  if (paused) {
+    pausedAt = performance.now();
+    window.clearInterval(timerId);
+    timerId = 0;
+  } else {
+    if (pausedAt !== null) {
+      pausedAccumulated += performance.now() - pausedAt;
+      pausedAt = null;
+    }
+    startLoop();
+  }
+
+  elements.pauseButton.textContent = paused ? "Resume" : "Pause";
+  elements.pauseButton.classList.toggle("is-paused", paused);
+  elements.statusDot.classList.toggle("paused", paused);
+  byId("monitor-status").textContent = paused ? "Monitoring Paused" : "Monitoring Active";
+  render();
 }
 
 function startLoop() {
   window.clearInterval(timerId);
-  timerId = window.setInterval(() => {
-    if (!state.paused) {
-      refresh();
-    }
-  }, state.refreshMs);
+  if (state.paused) {
+    timerId = 0;
+    return;
+  }
+  timerId = window.setInterval(refresh, state.refreshMs);
+}
+
+function syncControlsFromState() {
+  elements.timeRange.value = state.timeRange;
+  elements.interfaceSelect.value = state.interfaceName;
+  elements.processFilter.value = state.processQuery;
+  elements.userFilter.value = state.user;
+  elements.protocolFilter.value = state.protocol;
+  elements.minRate.value = String(state.minRate);
+  elements.processSort.value = state.processSort;
+  elements.connectionSort.value = state.connectionSort;
+  elements.historyRange.value = state.historyRange;
+  elements.refreshMs.value = String(state.refreshMs);
+  elements.alertThreshold.value = String(state.alertThreshold);
+  elements.directionButtons.forEach((button) => {
+    button.classList.toggle("active", button.dataset.direction === state.direction);
+  });
 }
 
 async function refresh() {
@@ -709,11 +775,17 @@ function generateMockSnapshot(): MonitorSnapshot {
     sentRate,
     receivedToday: 0.85 + tick * 0.018 + receivedRate / 120,
     sentToday: 0.56 + tick * 0.014 + sentRate / 140,
-    uptimeSeconds: tick * Math.round(state.refreshMs / 1000),
+    uptimeSeconds: getUptimeSeconds(),
     processes,
     connections,
     history: generateHistoryBuckets(),
   };
+}
+
+function getUptimeSeconds() {
+  const liveOffset = pausedAt !== null ? performance.now() - pausedAt : 0;
+  const elapsedMs = performance.now() - uptimeStartedAt - pausedAccumulated - liveOffset;
+  return Math.max(0, Math.floor(elapsedMs / 1000));
 }
 
 function maybeAddAlert(processes: ProcessTraffic[]) {
@@ -801,72 +873,173 @@ function renderProcessTable(processes: ProcessTraffic[], totalProcesses: number)
   const body = byId("process-body");
 
   if (processes.length === 0) {
-    body.innerHTML = `<tr><td colspan="8"><div class="empty-state">No process traffic matches the current filters.</div></td></tr>`;
+    processRowCache.clear();
+    body.innerHTML = `<tr class="empty-row"><td colspan="8"><div class="empty-state">No process traffic matches the current filters.</div></td></tr>`;
   } else {
-    body.innerHTML = processes
-      .map(
-        (process) => {
-          const processName = escapeHtml(process.name);
-          const user = escapeHtml(process.user);
+    const seen = new Set<number>();
+    processes.forEach((process, index) => {
+      seen.add(process.pid);
+      const row = ensureProcessRow(process);
+      updateProcessRow(row, process);
+      if (body.children[index] !== row) {
+        body.insertBefore(row, body.children[index] ?? null);
+      }
+    });
 
-          return `
-          <tr>
-            <td class="pid-col">${process.pid}</td>
-            <td>
-              <div class="proc-name" title="${processName}">
-                ${renderProcessIcon(process)}
-                <span class="proc-label">${processName}</span>
-              </div>
-            </td>
-            <td class="user-col">${user}</td>
-            <td><span class="protocol-badge">${process.protocol}</span></td>
-            <td class="rx-val">${formatRate(process.received)}</td>
-            <td class="tx-val">${formatRate(process.sent)}</td>
-            <td class="total-val">${formatRate(totalRate(process))}</td>
-            <td>${renderSparkline(process.history, process.sent > process.received ? "#388bfd" : "#3fb950")}</td>
-          </tr>
-        `;
-        },
-      )
-      .join("");
+    while (body.children.length > processes.length) {
+      body.removeChild(body.lastChild as Node);
+    }
+
+    for (const [pid] of processRowCache) {
+      if (!seen.has(pid)) {
+        processRowCache.delete(pid);
+      }
+    }
   }
 
   byId("process-footer").textContent = `Showing ${processes.length} of ${totalProcesses} active processes`;
+}
+
+function ensureProcessRow(process: ProcessTraffic) {
+  const cached = processRowCache.get(process.pid);
+  if (cached) {
+    return cached;
+  }
+
+  const row = document.createElement("tr");
+  row.innerHTML = `
+    <td class="pid-col"></td>
+    <td>
+      <div class="proc-name">
+        <span class="proc-icon" aria-hidden="true"></span>
+        <span class="proc-label"></span>
+      </div>
+    </td>
+    <td class="user-col"></td>
+    <td><span class="protocol-badge"></span></td>
+    <td class="rx-val"></td>
+    <td class="tx-val"></td>
+    <td class="total-val"></td>
+    <td class="trend-cell"></td>
+  `;
+  processRowCache.set(process.pid, row);
+  return row;
+}
+
+function updateProcessRow(row: HTMLTableRowElement, process: ProcessTraffic) {
+  const pidCell = row.children[0] as HTMLElement;
+  const nameWrap = row.children[1].firstElementChild as HTMLElement;
+  const icon = nameWrap.querySelector(".proc-icon") as HTMLElement;
+  const label = nameWrap.querySelector(".proc-label") as HTMLElement;
+  const user = row.children[2] as HTMLElement;
+  const protocol = row.children[3].firstElementChild as HTMLElement;
+  const rx = row.children[4] as HTMLElement;
+  const tx = row.children[5] as HTMLElement;
+  const total = row.children[6] as HTMLElement;
+  const trend = row.children[7] as HTMLElement;
+
+  pidCell.textContent = String(process.pid);
+  nameWrap.title = process.name;
+  const iconClass = `proc-icon ${processIconClass(process.name)}`;
+  if (icon.className !== iconClass) {
+    icon.className = iconClass;
+  }
+  icon.textContent = processIconLabel(process);
+  label.textContent = process.name;
+  user.textContent = process.user;
+  protocol.textContent = process.protocol;
+  rx.textContent = formatRate(process.received);
+  tx.textContent = formatRate(process.sent);
+  total.textContent = formatRate(totalRate(process));
+  trend.innerHTML = renderSparkline(process.history, process.sent > process.received ? "#388bfd" : "#3fb950");
 }
 
 function renderConnectionTable(connections: ConnectionTraffic[]) {
   const body = byId("connection-body");
 
   if (connections.length === 0) {
-    body.innerHTML = `<tr><td colspan="9"><div class="empty-state">No active connections match the current filters.</div></td></tr>`;
+    connectionRowCache.clear();
+    body.innerHTML = `<tr class="empty-row"><td colspan="9"><div class="empty-state">No active connections match the current filters.</div></td></tr>`;
     return;
   }
 
-  body.innerHTML = connections
-    .map(
-      (connection) => {
-        const remote = escapeHtml(connection.remote);
-        const processName = escapeHtml(connection.processName);
-        const user = escapeHtml(connection.user);
+  const seen = new Set<string>();
+  connections.forEach((connection, index) => {
+    const key = connectionKey(connection);
+    seen.add(key);
+    const row = ensureConnectionRow(key);
+    updateConnectionRow(row, connection);
+    if (body.children[index] !== row) {
+      body.insertBefore(row, body.children[index] ?? null);
+    }
+  });
 
-        return `
-        <tr>
-          <td><span class="flag">${escapeHtml(connection.flag)}</span> <span class="total-val" title="${remote}">${remote}</span></td>
-          <td class="port-col">${connection.port}</td>
-          <td><span class="protocol-badge">${connection.protocol}</span></td>
-          <td class="proc-col" title="${processName} (${connection.pid})">${processName} (${connection.pid})</td>
-          <td class="user-col">${user}</td>
-          <td><span class="state-badge ${connection.state === "ESTABLISHED" ? "established" : ""}">${
-            connection.state
-          }</span></td>
-          <td class="rx-val">${formatRate(connection.received)}</td>
-          <td class="tx-val">${formatRate(connection.sent)}</td>
-          <td class="total-val">${formatRate(connection.received + connection.sent)}</td>
-        </tr>
-      `;
-      },
-    )
-    .join("");
+  while (body.children.length > connections.length) {
+    body.removeChild(body.lastChild as Node);
+  }
+
+  for (const [key] of connectionRowCache) {
+    if (!seen.has(key)) {
+      connectionRowCache.delete(key);
+    }
+  }
+}
+
+function ensureConnectionRow(key: string) {
+  const cached = connectionRowCache.get(key);
+  if (cached) {
+    return cached;
+  }
+
+  const row = document.createElement("tr");
+  row.innerHTML = `
+    <td><span class="flag"></span> <span class="total-val remote-cell"></span></td>
+    <td class="port-col"></td>
+    <td><span class="protocol-badge"></span></td>
+    <td class="proc-col"></td>
+    <td class="user-col"></td>
+    <td><span class="state-badge"></span></td>
+    <td class="rx-val"></td>
+    <td class="tx-val"></td>
+    <td class="total-val"></td>
+  `;
+  connectionRowCache.set(key, row);
+  return row;
+}
+
+function updateConnectionRow(row: HTMLTableRowElement, connection: ConnectionTraffic) {
+  const remoteCell = row.children[0] as HTMLElement;
+  const flag = remoteCell.querySelector(".flag") as HTMLElement;
+  const remote = remoteCell.querySelector(".remote-cell") as HTMLElement;
+  const port = row.children[1] as HTMLElement;
+  const protocol = row.children[2].firstElementChild as HTMLElement;
+  const proc = row.children[3] as HTMLElement;
+  const user = row.children[4] as HTMLElement;
+  const stateBadge = row.children[5].firstElementChild as HTMLElement;
+  const rx = row.children[6] as HTMLElement;
+  const tx = row.children[7] as HTMLElement;
+  const total = row.children[8] as HTMLElement;
+
+  flag.textContent = connection.flag;
+  remote.textContent = connection.remote;
+  remote.title = connection.remote;
+  port.textContent = String(connection.port);
+  protocol.textContent = connection.protocol;
+  const procLabel = `${connection.processName} (${connection.pid})`;
+  proc.textContent = procLabel;
+  proc.title = procLabel;
+  user.textContent = connection.user;
+  stateBadge.textContent = connection.state;
+  stateBadge.classList.toggle("established", connection.state === "ESTABLISHED");
+  stateBadge.classList.toggle("listen", connection.state === "LISTEN");
+  stateBadge.classList.toggle("close-wait", connection.state === "CLOSE_WAIT");
+  rx.textContent = formatRate(connection.received);
+  tx.textContent = formatRate(connection.sent);
+  total.textContent = formatRate(connection.received + connection.sent);
+}
+
+function connectionKey(connection: ConnectionTraffic) {
+  return `${connection.pid}|${connection.remote}|${connection.port}|${connection.protocol}`;
 }
 
 function renderEvents() {
@@ -891,15 +1064,46 @@ function renderEvents() {
     .join("");
 }
 
-function drawTrafficChart(canvas: HTMLCanvasElement, received: number[], sent: number[]) {
-  const ctx = canvas.getContext("2d");
+function setupCanvasResize() {
+  const handle = () => {
+    if (latestSnapshot) {
+      drawTrafficChart(elements.trafficChart, trafficHistory.received, trafficHistory.sent);
+      drawHistoryChart(elements.historyChart, latestSnapshot.history);
+    }
+  };
+  window.addEventListener("resize", handle);
+}
 
+function prepareCanvas(canvas: HTMLCanvasElement) {
+  const ctx = canvas.getContext("2d");
   if (!ctx) {
+    return null;
+  }
+
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  const cssWidth = Math.max(1, Math.floor(rect.width));
+  const cssHeight = Math.max(1, Math.floor(rect.height || canvas.height));
+  const targetWidth = Math.round(cssWidth * dpr);
+  const targetHeight = Math.round(cssHeight * dpr);
+
+  if (canvas.width !== targetWidth || canvas.height !== targetHeight) {
+    canvas.width = targetWidth;
+    canvas.height = targetHeight;
+  }
+  canvas.style.height = `${cssHeight}px`;
+
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  return { ctx, width: cssWidth, height: cssHeight };
+}
+
+function drawTrafficChart(canvas: HTMLCanvasElement, received: number[], sent: number[]) {
+  const surface = prepareCanvas(canvas);
+  if (!surface) {
     return;
   }
 
-  const width = canvas.width;
-  const height = canvas.height;
+  const { ctx, width, height } = surface;
   const maxValue = Math.max(12, ...received, ...sent) * 1.15;
   const padLeft = 34;
   const padRight = 12;
@@ -915,14 +1119,12 @@ function drawTrafficChart(canvas: HTMLCanvasElement, received: number[], sent: n
 }
 
 function drawHistoryChart(canvas: HTMLCanvasElement, buckets: HistoryBucket[]) {
-  const ctx = canvas.getContext("2d");
-
-  if (!ctx) {
+  const surface = prepareCanvas(canvas);
+  if (!surface) {
     return;
   }
 
-  const width = canvas.width;
-  const height = canvas.height;
+  const { ctx, width, height } = surface;
   const padLeft = 34;
   const padRight = 10;
   const padTop = 10;
@@ -1097,18 +1299,12 @@ function resetControls() {
   state.refreshMs = 1000;
   state.alertThreshold = 18;
 
-  elements.timeRange.value = state.timeRange;
-  elements.interfaceSelect.value = state.interfaceName;
-  elements.processFilter.value = "";
-  elements.userFilter.value = state.user;
-  elements.protocolFilter.value = state.protocol;
-  elements.minRate.value = "0";
-  elements.processSort.value = state.processSort;
-  elements.connectionSort.value = state.connectionSort;
-  elements.historyRange.value = state.historyRange;
-  elements.refreshMs.value = String(state.refreshMs);
-  elements.alertThreshold.value = String(state.alertThreshold);
-  elements.directionButtons.forEach((button) => button.classList.toggle("active", button.dataset.direction === "all"));
+  setPaused(false);
+  syncControlsFromState();
+  elements.processPanel.classList.remove("compact");
+  elements.connectionPanel.classList.remove("compact");
+  elements.processDensity.setAttribute("aria-pressed", "false");
+  elements.connectionDensity.setAttribute("aria-pressed", "false");
   startLoop();
   addEvent("green", "Controls reset to <strong>live dashboard defaults</strong>");
 }
@@ -1126,9 +1322,8 @@ function renderSparkline(values: number[], color: string) {
   return `<svg class="sparkline" width="44" height="18" viewBox="0 0 44 18" aria-hidden="true"><polyline points="${points}" fill="none" stroke="${color}" stroke-width="1.5"/></svg>`;
 }
 
-function renderProcessIcon(process: ProcessTraffic) {
-  const label = (process.icon || process.name.slice(0, 1) || "?").slice(0, 2).toUpperCase();
-  return `<span class="proc-icon ${processIconClass(process.name)}" aria-hidden="true">${escapeHtml(label)}</span>`;
+function processIconLabel(process: ProcessTraffic) {
+  return (process.icon || process.name.slice(0, 1) || "?").slice(0, 2).toUpperCase();
 }
 
 function processIconClass(processName: string) {
@@ -1167,23 +1362,6 @@ function processIconClass(processName: string) {
   }
 
   return "app-generic";
-}
-
-function escapeHtml(value: string) {
-  return value.replace(/[&<>"']/g, (character) => {
-    switch (character) {
-      case "&":
-        return "&amp;";
-      case "<":
-        return "&lt;";
-      case ">":
-        return "&gt;";
-      case '"':
-        return "&quot;";
-      default:
-        return "&#39;";
-    }
-  });
 }
 
 function addEvent(tone: EventLogItem["tone"], html: string) {

@@ -91,37 +91,26 @@ select {
   margin-left: auto;
 }
 
-.interface-label,
 .muted {
   color: #7d8590;
   font-size: 12px;
 }
 
-.interface-select,
 .control-select,
 .control-input {
   min-height: 28px;
   width: 100%;
+  padding: 5px 8px;
   border: 1px solid #30363d;
   border-radius: 6px;
   outline: none;
   background: #21262d;
   color: #e6edf3;
   font-size: 12px;
+  transition: border-color 120ms ease, box-shadow 120ms ease;
 }
 
-.interface-select {
-  width: auto;
-  padding: 4px 10px;
-}
-
-.control-select,
-.control-input {
-  padding: 5px 8px;
-}
-
-.control-select,
-.interface-select {
+.control-select {
   appearance: none;
   padding-right: 26px;
   background-color: #21262d;
@@ -130,24 +119,20 @@ select {
   background-position: right 9px center;
 }
 
-.control-select option,
-.interface-select option {
+.control-select option {
   background: #21262d;
   color: #e6edf3;
 }
 
 .control-select:hover,
-.control-input:hover,
-.interface-select:hover {
+.control-input:hover {
   border-color: #388bfd66;
-  background-color: #21262d;
 }
 
-.control-select:focus,
-.control-input:focus,
-.interface-select:focus {
+.control-select:focus-visible,
+.control-input:focus-visible {
   border-color: #388bfd;
-  box-shadow: 0 0 0 3px #1f6feb22;
+  box-shadow: 0 0 0 3px #1f6feb33;
 }
 
 .control-input::placeholder {
@@ -161,6 +146,11 @@ select {
   color: #3fb950;
   font-size: 12px;
   white-space: nowrap;
+  transition: color 150ms ease;
+}
+
+.status-dot.paused {
+  color: #f0883e;
 }
 
 .dot {
@@ -169,14 +159,14 @@ select {
   border-radius: 50%;
   background: #3fb950;
   box-shadow: 0 0 0 4px #3fb95018;
+  transition: background-color 150ms ease, box-shadow 150ms ease;
 }
 
-.window-actions {
-  display: flex;
-  gap: 8px;
+.status-dot.paused .dot {
+  background: #f0883e;
+  box-shadow: 0 0 0 4px #f0883e1f;
 }
 
-.win-btn,
 .icon-btn {
   display: grid;
   place-items: center;
@@ -184,24 +174,18 @@ select {
   border-radius: 6px;
   background: #21262d;
   color: #7d8590;
+  transition: color 120ms ease, border-color 120ms ease, background-color 120ms ease;
 }
 
-.win-btn {
-  width: 28px;
-  height: 28px;
-  font-size: 12px;
-}
-
-.win-btn:hover,
 .icon-btn:hover {
   color: #e6edf3;
   border-color: #388bfd66;
 }
 
-.win-btn.close:hover {
-  border-color: #da3633;
-  background: #da3633;
+.icon-btn[aria-pressed="true"] {
   color: #ffffff;
+  border-color: #1f6feb;
+  background: #1f6feb;
 }
 
 .main {
@@ -219,32 +203,6 @@ select {
   overflow-y: auto;
   background: #161b22;
   border-right: 1px solid #21262d;
-}
-
-.nav {
-  padding: 12px 0 8px;
-  border-bottom: 1px solid #21262d;
-}
-
-.nav-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 9px 16px;
-  color: #7d8590;
-  font-size: 13px;
-}
-
-.nav-item.active {
-  color: #388bfd;
-  background: #1f6feb22;
-  border-right: 2px solid #388bfd;
-}
-
-.nav-icon {
-  width: 16px;
-  color: inherit;
-  text-align: center;
 }
 
 .control-center {
@@ -314,6 +272,12 @@ select {
   background: #21262d;
   color: #7d8590;
   font-size: 11px;
+  transition: color 120ms ease, border-color 120ms ease, background-color 120ms ease;
+}
+
+.segmented button:hover {
+  color: #e6edf3;
+  border-color: #388bfd66;
 }
 
 .segmented button.active {
@@ -335,6 +299,7 @@ select {
   min-height: 28px;
   border-radius: 6px;
   font-size: 11px;
+  transition: color 120ms ease, border-color 120ms ease, background-color 120ms ease;
 }
 
 .btn-primary {
@@ -342,6 +307,21 @@ select {
   background: #1f6feb;
   color: #ffffff;
   font-weight: 600;
+}
+
+.btn-primary:hover {
+  background: #388bfd;
+  border-color: #388bfd;
+}
+
+.btn-primary.is-paused {
+  border-color: #f0883e;
+  background: #f0883e;
+}
+
+.btn-primary.is-paused:hover {
+  background: #db6d28;
+  border-color: #db6d28;
 }
 
 .btn-secondary,
@@ -355,6 +335,12 @@ select {
 .clear-btn:hover {
   color: #e6edf3;
   border-color: #388bfd66;
+  background: #21262d;
+}
+
+button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px #1f6feb33;
 }
 
 .sidebar-status {
@@ -632,13 +618,19 @@ select {
 
 .canvas-wrap {
   width: 100%;
-  min-height: 170px;
 }
 
 canvas {
   display: block;
   width: 100%;
-  height: auto;
+}
+
+#traffic-chart {
+  height: 190px;
+}
+
+#history-chart {
+  height: 170px;
 }
 
 .table-wrap {
@@ -738,6 +730,19 @@ tbody td {
   text-overflow: ellipsis;
   vertical-align: middle;
   white-space: nowrap;
+  transition: background-color 100ms ease;
+}
+
+.compact tbody td {
+  padding: 4px 6px;
+  font-size: 11px;
+}
+
+.compact .proc-icon {
+  width: 18px;
+  height: 18px;
+  flex-basis: 18px;
+  font-size: 8px;
 }
 
 tbody tr:last-child td {
@@ -746,6 +751,10 @@ tbody tr:last-child td {
 
 tbody tr:hover td {
   background: #21262d44;
+}
+
+tbody tr.empty-row:hover td {
+  background: transparent;
 }
 
 .pid-col,
@@ -863,6 +872,18 @@ tbody tr:hover td {
   color: #3fb950;
   border-color: #3fb95044;
   background: #3fb95012;
+}
+
+.state-badge.listen {
+  color: #388bfd;
+  border-color: #388bfd44;
+  background: #388bfd12;
+}
+
+.state-badge.close-wait {
+  color: #f0883e;
+  border-color: #f0883e44;
+  background: #f0883e12;
 }
 
 .sparkline {
