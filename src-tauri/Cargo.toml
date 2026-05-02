@@ -20,7 +20,7 @@ tauri-plugin-opener = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 pcap = "0.9"
-etherparse = "0.12"
-libc = "0.2"
+etherparse = "0.14"
+maxminddb = "0.23"
 
 

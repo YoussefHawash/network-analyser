@@ -1,21 +1,17 @@
-import { useState } from "react";
 import { formatRate, totalRate } from "../lib/format";
 import {
   badge,
   cx,
-  iconButton,
   mutedCell,
   numeric,
   panel,
   panelHeader,
   panelTitle,
   tableShell,
-  td,
   th,
 } from "../lib/styles";
 import type { ProcessTraffic, SortKey } from "../lib/types";
 import { SelectField } from "./SelectField";
-import { Sparkline } from "./Sparkline";
 
 type Props = {
   processes: ProcessTraffic[];
@@ -30,7 +26,6 @@ export function ProcessTable({
   sortKey,
   onSortChange,
 }: Props) {
-  const [compact, setCompact] = useState(false);
 
   return (
     <section className={cx(panel, "flex h-[398px] flex-col overflow-hidden")}>
@@ -50,15 +45,7 @@ export function ProcessTable({
             <option value="received">Received</option>
             <option value="total">Total</option>
           </SelectField>
-          <button
-            type="button"
-            className={iconButton}
-            title="Toggle compact rows"
-            aria-pressed={compact}
-            onClick={() => setCompact((value) => !value)}
-          >
-            ≡
-          </button>
+          
         </div>
       </div>
 
@@ -72,7 +59,6 @@ export function ProcessTable({
             <col className="w-24" />
             <col className="w-24" />
             <col className="w-24" />
-            <col className="w-[70px]" />
           </colgroup>
           <thead>
             <tr>
@@ -83,13 +69,12 @@ export function ProcessTable({
               <th className={th}>Received</th>
               <th className={th}>Sent</th>
               <th className={th}>Total</th>
-              <th className={th}>Trend</th>
             </tr>
           </thead>
           <tbody>
             {processes.length === 0 ? (
               <tr>
-                <td className={td(compact)} colSpan={8}>
+                <td colSpan={8}>
                   <div className="px-2 py-6 text-center text-app-muted">
                     No process traffic matches the current filters.
                   </div>
@@ -100,7 +85,6 @@ export function ProcessTable({
                 <ProcessRow
                   key={process.pid}
                   process={process}
-                  compact={compact}
                 />
               ))
             )}
@@ -117,42 +101,42 @@ export function ProcessTable({
 
 function ProcessRow({
   process,
-  compact,
 }: {
   process: ProcessTraffic;
-  compact: boolean;
 }) {
-  const trendColor = process.sent > process.received ? "#388bfd" : "#3fb950";
 
   return (
     <tr className="group/row">
-      <td className={td(compact, cx(mutedCell, numeric))}>{process.pid}</td>
-      <td className={td(compact)}>
+      <td className={ cx(mutedCell, numeric)}>{process.pid}</td>
+      <td >
         <div
           className="flex min-w-0 items-center gap-1.5 overflow-hidden text-ellipsis whitespace-nowrap font-semibold"
           title={process.name}
         >
+          {process.flag && (
+            <span className="inline-block w-[26px] shrink-0 text-center text-[10px] font-bold text-app-muted">
+              {process.flag}
+            </span>
+          )}
           <span className="overflow-hidden text-ellipsis whitespace-nowrap">
             {process.name}
           </span>
         </div>
       </td>
-      <td className={td(compact, mutedCell)}>{process.user}</td>
-      <td className={td(compact)}>
+      <td     >{process.user}</td>
+      <td >
         <span className={badge}>{process.protocol}</span>
       </td>
-      <td className={td(compact, cx("text-app-green", numeric))}>
+      <td className={cx("text-app-green", numeric)}>
         {formatRate(process.received)}
       </td>
-      <td className={td(compact, cx("text-app-blue", numeric))}>
+      <td className={cx("text-app-blue", numeric)}>
         {formatRate(process.sent)}
       </td>
-      <td className={td(compact, cx("font-semibold", numeric))}>
+      <td className={ cx("font-semibold", numeric)}>
         {formatRate(totalRate(process))}
       </td>
-      <td className={td(compact)}>
-        <Sparkline values={process.history} color={trendColor} />
-      </td>
+      
     </tr>
   );
 }

@@ -1,4 +1,6 @@
-#[derive(serde::Serialize, Clone)]
+use serde::Serialize;
+
+#[derive(Serialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct MonitorSnapshot {
     pub available_interfaces: Vec<String>,
@@ -13,27 +15,24 @@ pub struct MonitorSnapshot {
     pub history: Vec<HistoryBucket>,
 }
 
-#[derive(serde::Serialize, Clone)]
+#[derive(Serialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ProcessTraffic {
     pub pid: u32,
     pub name: String,
     pub user: String,
-    pub flag: String,
     pub protocol: String,
     pub received: f64,
     pub sent: f64,
     pub history: Vec<f64>,
 }
 
-#[derive(serde::Serialize, Clone)]
+#[derive(Serialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ConnectionTraffic {
     pub remote: String,
     pub flag: String,
     pub port: u16,
-    #[serde(skip)]
-    pub local_port: u16,
     pub protocol: String,
     pub process_name: String,
     pub pid: u32,
@@ -41,13 +40,6 @@ pub struct ConnectionTraffic {
     pub received: f64,
     pub sent: f64,
     pub state: String,
-}
-
-#[derive(serde::Serialize, Clone)]
-pub struct HistoryBucket {
-    pub label: String,
-    pub received: f64,
-    pub sent: f64,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -72,4 +64,11 @@ pub struct ParsedPacket {
     pub size: u16,
     pub outbound: bool,
     pub is_ipv6: bool,
+}
+
+#[derive(Serialize, Debug, Clone)]
+pub struct HistoryBucket {
+    pub label: String,
+    pub received: f64,
+    pub sent: f64,
 }

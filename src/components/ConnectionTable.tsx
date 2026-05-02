@@ -1,9 +1,7 @@
-import { useState } from "react";
 import { formatRate } from "../lib/format";
 import {
   badge,
   cx,
-  iconButton,
   mutedCell,
   numeric,
   panel,
@@ -11,20 +9,18 @@ import {
   panelSubtitle,
   panelTitle,
   tableShell,
-  td,
   th,
 } from "../lib/styles";
-import type { ConnectionTraffic, SortKey } from "../lib/types";
+import type { GroupedConnection, SortKey } from "../lib/types";
 import { SelectField } from "./SelectField";
 
 type Props = {
-  connections: ConnectionTraffic[];
+  connections: GroupedConnection[];
   sortKey: SortKey;
   onSortChange: (key: SortKey) => void;
 };
 
 export function ConnectionTable({ connections, sortKey, onSortChange }: Props) {
-  const [compact, setCompact] = useState(false);
 
   return (
     <section className={cx(panel, "flex h-[360px] flex-col overflow-hidden")}>
@@ -47,15 +43,7 @@ export function ConnectionTable({ connections, sortKey, onSortChange }: Props) {
             <option value="received">Received</option>
             <option value="sent">Sent</option>
           </SelectField>
-          <button
-            type="button"
-            className={iconButton}
-            title="Toggle compact rows"
-            aria-pressed={compact}
-            onClick={() => setCompact((value) => !value)}
-          >
-            ≡
-          </button>
+         
         </div>
       </div>
 
@@ -88,18 +76,17 @@ export function ConnectionTable({ connections, sortKey, onSortChange }: Props) {
           <tbody>
             {connections.length === 0 ? (
               <tr>
-                <td className={td(compact)} colSpan={9}>
+                <td  colSpan={9}>
                   <div className="px-2 py-6 text-center text-app-muted">
                     No active connections match the current filters.
                   </div>
                 </td>
               </tr>
             ) : (
-              connections.map((connection) => (
+              connections.map((conn) => (
                 <ConnectionRow
-                  key={connectionKey(connection)}
-                  connection={connection}
-                  compact={compact}
+                  key={connectionKey(conn)}
+                  connection={conn}
                 />
               ))
             )}
@@ -112,16 +99,19 @@ export function ConnectionTable({ connections, sortKey, onSortChange }: Props) {
 
 function ConnectionRow({
   connection,
-  compact,
 }: {
-  connection: ConnectionTraffic;
-  compact: boolean;
+  connection: GroupedConnection;
 }) {
-  const procLabel = `${connection.processName} (${connection.pid})`;
+  const procLabel =
+    connection.processName
+      ? `${connection.processName} (${connection.pid})`
+      : connection.pid !== "0"
+        ? `(${connection.pid})`
+        : "—";
 
   return (
     <tr className="group/row">
-      <td className={td(compact)}>
+      <td >
         <span className="inline-block w-[26px] text-center text-[10px] font-bold text-app-muted">
           {connection.flag}
         </span>{" "}
@@ -129,33 +119,47 @@ function ConnectionRow({
           {connection.remote}
         </span>
       </td>
-      <td className={td(compact, cx(mutedCell, numeric))}>{connection.port}</td>
-      <td className={td(compact)}>
+      <td className={ cx(mutedCell, numeric)}>
+        {connection.port === "multi" ? (
+          <span className="rounded bg-app-line px-1 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-app-muted">
+            multi
+          </span>
+        ) : (
+          connection.port
+        )}
+      </td>
+      <td >
         <span className={badge}>{connection.protocol}</span>
       </td>
-      <td className={td(compact, mutedCell)} title={procLabel}>
+      <td className={cx(mutedCell)} title={procLabel}>
         {procLabel}
       </td>
-      <td className={td(compact, mutedCell)}>{connection.user}</td>
-      <td className={td(compact)}>
-        <span className={cx(badge, stateBadgeClass(connection.state))}>
-          {connection.state}
-        </span>
+      <td className={cx(mutedCell)}>
+        {connection.user || <span className="text-app-muted/50">—</span>}
       </td>
-      <td className={td(compact, cx("text-app-green", numeric))}>
+      <td >
+        {connection.state ? (
+          <span className={cx(badge, stateBadgeClass(connection.state))}>
+            {connection.state}
+          </span>
+        ) : (
+          <span className="text-app-muted/50">—</span>
+        )}
+      </td>
+      <td className={ cx("text-app-green", numeric)}>
         {formatRate(connection.received)}
       </td>
-      <td className={td(compact, cx("text-app-blue", numeric))}>
+      <td className={ cx("text-app-blue", numeric)}>
         {formatRate(connection.sent)}
       </td>
-      <td className={td(compact, cx("font-semibold", numeric))}>
+      <td className={cx("font-semibold", numeric)}>
         {formatRate(connection.received + connection.sent)}
       </td>
     </tr>
   );
 }
 
-function stateBadgeClass(state: ConnectionTraffic["state"]) {
+function stateBadgeClass(state: string) {
   if (state === "ESTABLISHED") {
     return "border-app-green/30 bg-app-green/10 text-app-green";
   }
@@ -165,6 +169,6 @@ function stateBadgeClass(state: ConnectionTraffic["state"]) {
   return "border-app-orange/30 bg-app-orange/10 text-app-orange";
 }
 
-function connectionKey(c: ConnectionTraffic) {
-  return `${c.pid}|${c.remote}|${c.port}|${c.protocol}`;
+function connectionKey(c: GroupedConnection) {
+  return `${c.remote}|${c.protocol}`;
 }

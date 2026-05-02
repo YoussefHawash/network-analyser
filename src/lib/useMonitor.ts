@@ -1,13 +1,10 @@
 import { invoke } from "@tauri-apps/api/core";
 import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  sortableConnectionValue,
-  sortableProcessValue,
-  totalRate,
-} from "./format";
+import { sortableProcessValue, totalRate } from "./format";
 import type {
   ConnectionTraffic,
   FilterState,
+  GroupedConnection,
   MonitorSnapshot,
   ProcessTraffic,
 } from "./types";
@@ -54,6 +51,9 @@ export function useMonitor(filters: FilterState) {
       const next = await invoke<MonitorSnapshot>("get_network_snapshot", {
         interfaceName: filters.interfaceName,
       });
+      console.log(
+        `Tick ${tickRef.current}: received ${next.receivedRate} KB/s, sent ${next.sentRate} KB/s`,
+      );
 
       if (cancelled) return;
       setSnapshot(next);
@@ -123,25 +123,59 @@ function filterProcesses(processes: ProcessTraffic[], filters: FilterState) {
 function filterConnections(
   connections: ConnectionTraffic[],
   filters: FilterState,
-) {
-  return connections
-    .filter((c) =>
-      matches(
-        c.processName,
-        c.pid,
-        c.user,
-        c.protocol,
-        c.received + c.sent,
-        c.received,
-        c.sent,
-        filters,
-      ),
-    )
-    .sort(
-      (a, b) =>
-        sortableConnectionValue(b, filters.connectionSort) -
-        sortableConnectionValue(a, filters.connectionSort),
-    );
+): GroupedConnection[] {
+  const filtered = connections.filter((c) =>
+    matches(
+      c.processName,
+      c.pid,
+      c.user,
+      c.protocol,
+      c.received + c.sent,
+      c.received,
+      c.sent,
+      filters,
+    ),
+  );
+
+  const groups = new Map<string, ConnectionTraffic[]>();
+  for (const c of filtered) {
+    const bucket = groups.get(c.remote);
+    if (bucket) bucket.push(c);
+    else groups.set(c.remote, [c]);
+  }
+
+  const result: GroupedConnection[] = [];
+  for (const conns of groups.values()) {
+    const ports = [...new Set(conns.map((c) => c.port))];
+    const pids = [...new Set(conns.map((c) => c.pid))];
+    const protocols = [...new Set(conns.map((c) => c.protocol))];
+    const users = [...new Set(conns.map((c) => c.user).filter(Boolean))];
+    const states = [...new Set(conns.map((c) => c.state).filter(Boolean))];
+    const totalRx = conns.reduce((s, c) => s + c.received, 0);
+    const totalTx = conns.reduce((s, c) => s + c.sent, 0);
+
+    result.push({
+      remote: conns[0].remote,
+      flag: conns[0].flag,
+      port: ports.length === 1 ? String(ports[0]) : "multi",
+      protocol: protocols.length === 1 ? protocols[0] : "multi",
+      processName: conns[0].processName,
+      pid: pids.length === 1 ? String(pids[0]) : "multi",
+      user: users.length === 0 ? "" : users.length === 1 ? users[0] : "multi",
+      state:
+        states.length === 0 ? "" : states.length === 1 ? states[0] : "multi",
+      received: totalRx,
+      sent: totalTx,
+    });
+  }
+
+  const sortValue = (g: GroupedConnection) => {
+    if (filters.connectionSort === "received") return g.received;
+    if (filters.connectionSort === "sent") return g.sent;
+    return g.received + g.sent;
+  };
+
+  return result.sort((a, b) => sortValue(b) - sortValue(a));
 }
 
 function matches(

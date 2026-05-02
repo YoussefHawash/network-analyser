@@ -1,6 +1,6 @@
 import { formatRate } from "../lib/format";
 import type {
-  ConnectionTraffic,
+  GroupedConnection,
   MonitorSnapshot,
   ProcessTraffic,
 } from "../lib/types";
@@ -8,7 +8,7 @@ import type {
 type Props = {
   snapshot: MonitorSnapshot | null;
   processes: ProcessTraffic[];
-  connections: ConnectionTraffic[];
+  connections: GroupedConnection[];
 };
 
 export function StatCards({ snapshot, processes, connections }: Props) {

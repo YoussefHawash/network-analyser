@@ -5,6 +5,7 @@ export type ProcessTraffic = {
   pid: number;
   name: string;
   user: string;
+  flag: string;
   protocol: "TCP" | "UDP";
   received: number;
   sent: number;
@@ -21,7 +22,20 @@ export type ConnectionTraffic = {
   user: string;
   received: number;
   sent: number;
-  state: "ESTABLISHED" | "LISTEN" | "CLOSE_WAIT";
+  state: string;
+};
+
+export type GroupedConnection = {
+  remote: string;
+  flag: string;
+  port: string;
+  protocol: string;
+  processName: string;
+  pid: string;
+  user: string;
+  state: string;
+  received: number;
+  sent: number;
 };
 
 export type HistoryBucket = {
