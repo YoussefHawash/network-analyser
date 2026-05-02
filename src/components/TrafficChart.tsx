@@ -3,6 +3,19 @@ import type { TrafficHistory } from "../lib/useMonitor";
 
 type Props = { history: TrafficHistory };
 
+const PAD = { left: 34, right: 12, top: 12, bottom: 28 };
+const TIME_LABELS = ["60s", "50s", "40s", "30s", "20s", "10s", "0s"];
+const COLOR_RX = "#3fb950";
+const COLOR_TX = "#a78bfa";
+
+type Box = {
+  ctx: CanvasRenderingContext2D;
+  width: number;
+  height: number;
+  graphWidth: number;
+  graphHeight: number;
+};
+
 export function TrafficChart({ history }: Props) {
   const ref = useRef<HTMLCanvasElement>(null);
 
@@ -11,50 +24,14 @@ export function TrafficChart({ history }: Props) {
     if (!canvas) return;
 
     const draw = () => {
-      const surface = prepareCanvas(canvas);
-      if (!surface) return;
-      const { ctx, width, height } = surface;
-      const maxValue =
-        Math.max(12, ...history.received, ...history.sent) * 1.15;
-      const padLeft = 34,
-        padRight = 12,
-        padTop = 12,
-        padBottom = 28;
-      const graphWidth = width - padLeft - padRight;
-      const graphHeight = height - padTop - padBottom;
+      const box = prepareCanvas(canvas);
+      if (!box) return;
+      const max = Math.max(12, ...history.received, ...history.sent) * 1.15;
 
-      ctx.clearRect(0, 0, width, height);
-      drawGrid(
-        ctx,
-        width,
-        height,
-        padLeft,
-        padRight,
-        padTop,
-        padBottom,
-        maxValue,
-        ["60s", "50s", "40s", "30s", "20s", "10s", "0s"],
-      );
-      drawLine(
-        ctx,
-        history.received,
-        "#3fb950",
-        maxValue,
-        padLeft,
-        padTop,
-        graphWidth,
-        graphHeight,
-      );
-      drawLine(
-        ctx,
-        history.sent,
-        "#a78bfa",
-        maxValue,
-        padLeft,
-        padTop,
-        graphWidth,
-        graphHeight,
-      );
+      box.ctx.clearRect(0, 0, box.width, box.height);
+      drawGrid(box, max);
+      drawSeries(box, history.received, COLOR_RX, max);
+      drawSeries(box, history.sent, COLOR_TX, max);
     };
 
     draw();
@@ -65,45 +42,41 @@ export function TrafficChart({ history }: Props) {
   return (
     <canvas
       ref={ref}
-      className="block h-[full] w-full"
+      className="block h-full w-full"
       width={520}
       height={240}
     />
   );
 }
 
-function prepareCanvas(canvas: HTMLCanvasElement) {
+function prepareCanvas(canvas: HTMLCanvasElement): Box | null {
   const ctx = canvas.getContext("2d");
   if (!ctx) return null;
+
   const dpr = window.devicePixelRatio || 1;
   const rect = canvas.getBoundingClientRect();
-  const cssWidth = Math.max(1, Math.floor(rect.width));
-  const cssHeight = Math.max(1, Math.floor(rect.height || canvas.height));
-  const targetWidth = Math.round(cssWidth * dpr);
-  const targetHeight = Math.round(cssHeight * dpr);
-  if (canvas.width !== targetWidth || canvas.height !== targetHeight) {
-    canvas.width = targetWidth;
-    canvas.height = targetHeight;
+  const width = Math.max(1, Math.floor(rect.width));
+  const height = Math.max(1, Math.floor(rect.height || canvas.height));
+  const bufferWidth = Math.round(width * dpr);
+  const bufferHeight = Math.round(height * dpr);
+
+  if (canvas.width !== bufferWidth || canvas.height !== bufferHeight) {
+    canvas.width = bufferWidth;
+    canvas.height = bufferHeight;
   }
-  canvas.style.height = `${cssHeight}px`;
+  canvas.style.height = `${height}px`;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  return { ctx, width: cssWidth, height: cssHeight };
+
+  return {
+    ctx,
+    width,
+    height,
+    graphWidth: width - PAD.left - PAD.right,
+    graphHeight: height - PAD.top - PAD.bottom,
+  };
 }
 
-function drawGrid(
-  ctx: CanvasRenderingContext2D,
-  width: number,
-  height: number,
-  padLeft: number,
-  padRight: number,
-  padTop: number,
-  padBottom: number,
-  maxValue: number,
-  labels: string[],
-) {
-  const graphHeight = height - padTop - padBottom;
-  const graphWidth = width - padLeft - padRight;
-
+function drawGrid({ ctx, width, height, graphWidth, graphHeight }: Box, max: number) {
   ctx.strokeStyle = "#21262d";
   ctx.lineWidth = 0.5;
   ctx.fillStyle = "#484f58";
@@ -111,34 +84,32 @@ function drawGrid(
   ctx.textAlign = "right";
 
   for (let step = 0; step <= 6; step += 1) {
-    const value = (maxValue / 6) * step;
-    const y = padTop + graphHeight - (value / maxValue) * graphHeight;
+    const value = (max / 6) * step;
+    const y = PAD.top + graphHeight - (value / max) * graphHeight;
     ctx.beginPath();
-    ctx.moveTo(padLeft, y);
-    ctx.lineTo(width - padRight, y);
+    ctx.moveTo(PAD.left, y);
+    ctx.lineTo(width - PAD.right, y);
     ctx.stroke();
-    ctx.fillText(String(Math.round(value)), padLeft - 4, y + 3);
+    ctx.fillText(String(Math.round(value)), PAD.left - 4, y + 3);
   }
 
   ctx.textAlign = "center";
-  labels.forEach((label, i) => {
-    const x = padLeft + (i / (labels.length - 1)) * graphWidth;
+  TIME_LABELS.forEach((label, i) => {
+    const x = PAD.left + (i / (TIME_LABELS.length - 1)) * graphWidth;
     ctx.fillText(label, x, height - 8);
   });
 }
 
-function drawLine(
-  ctx: CanvasRenderingContext2D,
+function drawSeries(
+  { ctx, graphWidth, graphHeight }: Box,
   data: number[],
   color: string,
-  maxValue: number,
-  padLeft: number,
-  padTop: number,
-  graphWidth: number,
-  graphHeight: number,
+  max: number,
 ) {
-  const x = (i: number) => padLeft + (i / (data.length - 1)) * graphWidth;
-  const y = (v: number) => padTop + graphHeight - (v / maxValue) * graphHeight;
+  if (data.length === 0) return;
+
+  const x = (i: number) => PAD.left + (i / (data.length - 1)) * graphWidth;
+  const y = (v: number) => PAD.top + graphHeight - (v / max) * graphHeight;
 
   ctx.beginPath();
   data.forEach((value, i) => {
@@ -152,7 +123,7 @@ function drawLine(
   ctx.lineTo(x(data.length - 1), y(0));
   ctx.lineTo(x(0), y(0));
   ctx.closePath();
-  const gradient = ctx.createLinearGradient(0, padTop, 0, padTop + graphHeight);
+  const gradient = ctx.createLinearGradient(0, PAD.top, 0, PAD.top + graphHeight);
   gradient.addColorStop(0, `${color}40`);
   gradient.addColorStop(1, `${color}05`);
   ctx.fillStyle = gradient;

@@ -21,7 +21,6 @@ type Props = {
 };
 
 export function ConnectionTable({ connections, sortKey, onSortChange }: Props) {
-
   return (
     <section className={cx(panel, "flex h-[360px] flex-col overflow-hidden")}>
       <div className={panelHeader}>
@@ -43,7 +42,6 @@ export function ConnectionTable({ connections, sortKey, onSortChange }: Props) {
             <option value="received">Received</option>
             <option value="sent">Sent</option>
           </SelectField>
-         
         </div>
       </div>
 
@@ -76,7 +74,7 @@ export function ConnectionTable({ connections, sortKey, onSortChange }: Props) {
           <tbody>
             {connections.length === 0 ? (
               <tr>
-                <td  colSpan={9}>
+                <td colSpan={9}>
                   <div className="px-2 py-6 text-center text-app-muted">
                     No active connections match the current filters.
                   </div>
@@ -84,10 +82,7 @@ export function ConnectionTable({ connections, sortKey, onSortChange }: Props) {
               </tr>
             ) : (
               connections.map((conn) => (
-                <ConnectionRow
-                  key={connectionKey(conn)}
-                  connection={conn}
-                />
+                <ConnectionRow key={connectionKey(conn)} connection={conn} />
               ))
             )}
           </tbody>
@@ -97,21 +92,16 @@ export function ConnectionTable({ connections, sortKey, onSortChange }: Props) {
   );
 }
 
-function ConnectionRow({
-  connection,
-}: {
-  connection: GroupedConnection;
-}) {
-  const procLabel =
-    connection.processName
-      ? `${connection.processName} (${connection.pid})`
-      : connection.pid !== "0"
-        ? `(${connection.pid})`
-        : "—";
+function ConnectionRow({ connection }: { connection: GroupedConnection }) {
+  const procLabel = connection.processName
+    ? `${connection.processName} (${connection.pid})`
+    : connection.pid !== "0"
+      ? `(${connection.pid})`
+      : "—";
 
   return (
     <tr className="group/row">
-      <td >
+      <td>
         <span className="inline-block w-[26px] text-center text-[10px] font-bold text-app-muted">
           {connection.flag}
         </span>{" "}
@@ -119,7 +109,7 @@ function ConnectionRow({
           {connection.remote}
         </span>
       </td>
-      <td className={ cx(mutedCell, numeric)}>
+      <td className={cx(mutedCell, numeric)}>
         {connection.port === "multi" ? (
           <span className="rounded bg-app-line px-1 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-app-muted">
             multi
@@ -128,16 +118,16 @@ function ConnectionRow({
           connection.port
         )}
       </td>
-      <td >
+      <td>
         <span className={badge}>{connection.protocol}</span>
       </td>
-      <td className={cx(mutedCell)} title={procLabel}>
+      <td className={mutedCell} title={procLabel}>
         {procLabel}
       </td>
-      <td className={cx(mutedCell)}>
+      <td className={mutedCell}>
         {connection.user || <span className="text-app-muted/50">—</span>}
       </td>
-      <td >
+      <td>
         {connection.state ? (
           <span className={cx(badge, stateBadgeClass(connection.state))}>
             {connection.state}
@@ -146,10 +136,10 @@ function ConnectionRow({
           <span className="text-app-muted/50">—</span>
         )}
       </td>
-      <td className={ cx("text-app-green", numeric)}>
+      <td className={cx("text-app-green", numeric)}>
         {formatRate(connection.received)}
       </td>
-      <td className={ cx("text-app-blue", numeric)}>
+      <td className={cx("text-app-blue", numeric)}>
         {formatRate(connection.sent)}
       </td>
       <td className={cx("font-semibold", numeric)}>

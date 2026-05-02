@@ -26,13 +26,10 @@ export function ProcessTable({
   sortKey,
   onSortChange,
 }: Props) {
-
   return (
     <section className={cx(panel, "flex h-[398px] flex-col overflow-hidden")}>
       <div className={panelHeader}>
-        <div>
-          <div className={panelTitle}>Process Network Usage</div>
-        </div>
+        <div className={panelTitle}>Process Network Usage</div>
         <div className="flex items-center gap-1.5 text-[11px] text-app-muted">
           <span>Sort by:</span>
           <SelectField
@@ -45,7 +42,6 @@ export function ProcessTable({
             <option value="received">Received</option>
             <option value="total">Total</option>
           </SelectField>
-          
         </div>
       </div>
 
@@ -74,7 +70,7 @@ export function ProcessTable({
           <tbody>
             {processes.length === 0 ? (
               <tr>
-                <td colSpan={8}>
+                <td colSpan={7}>
                   <div className="px-2 py-6 text-center text-app-muted">
                     No process traffic matches the current filters.
                   </div>
@@ -82,10 +78,7 @@ export function ProcessTable({
               </tr>
             ) : (
               processes.map((process) => (
-                <ProcessRow
-                  key={process.pid}
-                  process={process}
-                />
+                <ProcessRow key={process.pid} process={process} />
               ))
             )}
           </tbody>
@@ -99,16 +92,11 @@ export function ProcessTable({
   );
 }
 
-function ProcessRow({
-  process,
-}: {
-  process: ProcessTraffic;
-}) {
-
+function ProcessRow({ process }: { process: ProcessTraffic }) {
   return (
     <tr className="group/row">
-      <td className={ cx(mutedCell, numeric)}>{process.pid}</td>
-      <td >
+      <td className={cx(mutedCell, numeric)}>{process.pid}</td>
+      <td>
         <div
           className="flex min-w-0 items-center gap-1.5 overflow-hidden text-ellipsis whitespace-nowrap font-semibold"
           title={process.name}
@@ -123,8 +111,8 @@ function ProcessRow({
           </span>
         </div>
       </td>
-      <td     >{process.user}</td>
-      <td >
+      <td>{process.user}</td>
+      <td>
         <span className={badge}>{process.protocol}</span>
       </td>
       <td className={cx("text-app-green", numeric)}>
@@ -133,10 +121,9 @@ function ProcessRow({
       <td className={cx("text-app-blue", numeric)}>
         {formatRate(process.sent)}
       </td>
-      <td className={ cx("font-semibold", numeric)}>
+      <td className={cx("font-semibold", numeric)}>
         {formatRate(totalRate(process))}
       </td>
-      
     </tr>
   );
 }

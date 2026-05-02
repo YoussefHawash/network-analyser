@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 import {
   cx,
   panel,
@@ -17,7 +17,6 @@ import { TrafficChart } from "./TrafficChart";
 
 export function App() {
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
-  const lastEventSample = useRef<number | null>(null);
 
   const updateFilters = useCallback((patch: Partial<FilterState>) => {
     setFilters((prev) => ({ ...prev, ...patch }));
@@ -25,13 +24,6 @@ export function App() {
 
   const { snapshot, trafficHistory, filteredProcesses, filteredConnections } =
     useMonitor(filters);
-
-  useEffect(() => {
-    if (!snapshot || filters.paused) return;
-
-    const sampleId = snapshot.uptimeSeconds;
-    if (sampleId <= 0 || sampleId === lastEventSample.current) return;
-  }, [filters.alertThreshold, filters.paused, snapshot]);
 
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-app-bg text-app-text">
@@ -73,38 +65,21 @@ export function App() {
             />
           </div>
 
-          <div>
-            <ConnectionTable
-              connections={filteredConnections}
-              sortKey={filters.connectionSort}
-              onSortChange={(connectionSort) =>
-                updateFilters({ connectionSort })
-              }
-            />
-          </div>
+          <ConnectionTable
+            connections={filteredConnections}
+            sortKey={filters.connectionSort}
+            onSortChange={(connectionSort) => updateFilters({ connectionSort })}
+          />
         </section>
       </main>
     </div>
   );
 }
 
-function Legend({
-  color,
-  label,
-  square = false,
-}: {
-  color: string;
-  label: string;
-  square?: boolean;
-}) {
+function Legend({ color, label }: { color: string; label: string }) {
   return (
     <div className="flex items-center gap-1.5 whitespace-nowrap text-[11px] text-app-muted">
-      <div
-        className={cx(
-          color,
-          square ? "h-2.5 w-2.5 rounded-sm" : "h-0.5 w-5 rounded-sm",
-        )}
-      />
+      <div className={cx(color, "h-0.5 w-5 rounded-sm")} />
       {label}
     </div>
   );

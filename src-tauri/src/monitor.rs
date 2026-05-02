@@ -48,6 +48,7 @@ struct State {
     pid_cache: PidCache,
 }
 
+#[derive(Clone)]
 struct PortEntry {
     pid: u32,
     state: String,
@@ -61,27 +62,24 @@ struct PidCache {
 
 impl Monitor {
     pub fn start(interface: &str) -> Result<Self> {
-        let available_interfaces = list_interfaces();
-        let geoip = Reader::open_readfile("GeoLite2-Country.mmdb").ok();
-
+        let now = Instant::now();
         let state = Arc::new(Mutex::new(State {
             interface: interface.to_string(),
-            available_interfaces,
-            started: Instant::now(),
+            available_interfaces: list_interfaces(),
+            started: now,
             received_total: 0,
             sent_total: 0,
-            last_sample: Instant::now(),
+            last_sample: now,
             last_received: 0,
             last_sent: 0,
             received_rate: 0.0,
             sent_rate: 0.0,
             connections: HashMap::new(),
             history: VecDeque::with_capacity(HISTORY_LEN),
-            geoip,
+            geoip: Reader::open_readfile("GeoLite2-Country.mmdb").ok(),
             pid_cache: PidCache {
-                last_refresh: Instant::now()
-                    .checked_sub(PID_REFRESH + Duration::from_secs(1))
-                    .unwrap_or_else(Instant::now),
+                // Force a refresh on the first tick.
+                last_refresh: now.checked_sub(PID_REFRESH).unwrap_or(now),
                 by_port: HashMap::new(),
             },
         }));
@@ -136,24 +134,20 @@ impl State {
                     .pid_cache
                     .by_port
                     .get(&(conn.protocol.clone(), conn.local_port));
-                if conn.pid == 0 {
-                    if let Some(e) = entry {
+                if let Some(e) = entry {
+                    if conn.pid == 0 {
                         conn.pid = e.pid;
+                    }
+                    if conn.state.is_empty() {
+                        conn.state = e.state.clone();
+                    }
+                    if conn.user.is_empty() {
+                        conn.user = e.user.clone();
                     }
                 }
                 if conn.pid != 0 && conn.process_name.is_empty() {
                     if let Some(name) = read_process_name(conn.pid) {
                         conn.process_name = name;
-                    }
-                }
-                if conn.state.is_empty() {
-                    if let Some(e) = entry {
-                        conn.state = e.state.clone();
-                    }
-                }
-                if conn.user.is_empty() {
-                    if let Some(e) = entry {
-                        conn.user = e.user.clone();
                     }
                 }
             }
@@ -232,39 +226,27 @@ impl State {
                 .unwrap_or_default();
 
             let cache_key = (proto_str.clone(), local_port);
-            let mut pid = self
-                .pid_cache
-                .by_port
-                .get(&cache_key)
-                .map(|e| e.pid)
-                .unwrap_or(0);
-            let mut conn_state = self
-                .pid_cache
-                .by_port
-                .get(&cache_key)
-                .map(|e| e.state.clone())
-                .unwrap_or_default();
-            let mut user = self
-                .pid_cache
-                .by_port
-                .get(&cache_key)
-                .map(|e| e.user.clone())
-                .unwrap_or_default();
-
-            if pid == 0 {
-                if let Some(fresh) = lookup_pid_for_port(&proto_str, local_port) {
-                    pid = fresh.pid;
-                    conn_state = fresh.state.clone();
-                    user = fresh.user.clone();
-                    self.pid_cache.by_port.insert(cache_key, fresh);
+            let port_entry = match self.pid_cache.by_port.get(&cache_key).cloned() {
+                Some(e) => Some(e),
+                None => {
+                    let fresh = lookup_pid_for_port(&proto_str, local_port);
+                    if let Some(ref e) = fresh {
+                        self.pid_cache.by_port.insert(cache_key, e.clone());
+                    }
+                    fresh
                 }
-            }
+            };
 
+            let (pid, state, user) = match port_entry {
+                Some(e) => (e.pid, e.state, e.user),
+                None => (0, String::new(), String::new()),
+            };
             let process_name = if pid != 0 {
                 read_process_name(pid).unwrap_or_default()
             } else {
                 String::new()
             };
+
             self.connections.insert(
                 key.clone(),
                 ConnectionTraffic {
@@ -278,12 +260,15 @@ impl State {
                     user,
                     received: 0.0,
                     sent: 0.0,
-                    state: conn_state,
+                    state,
                 },
             );
         }
 
-        let entry = self.connections.get_mut(&key).expect("just inserted");
+        let entry = self
+            .connections
+            .get_mut(&key)
+            .expect("connection inserted above");
         let bytes = packet.size as u64;
         if packet.outbound {
             entry.sent += bytes as f64;
@@ -457,21 +442,25 @@ fn uid_to_username(uid: u32) -> String {
     uid.to_string()
 }
 
-fn build_port_pid_map() -> HashMap<(String, u16), PortEntry> {
-    struct InodeMeta {
-        proto: String,
-        port: u16,
-        state: String,
-        uid: u32,
-    }
+struct SocketInfo {
+    proto: &'static str,
+    port: u16,
+    state: String,
+    uid: u32,
+}
 
-    let mut inode_to_meta: HashMap<u64, InodeMeta> = HashMap::new();
-    for (path, proto) in [
-        ("/proc/net/tcp", "TCP"),
-        ("/proc/net/tcp6", "TCP"),
-        ("/proc/net/udp", "UDP"),
-        ("/proc/net/udp6", "UDP"),
-    ] {
+const PROC_NET_TABLES: &[(&str, &str)] = &[
+    ("/proc/net/tcp", "TCP"),
+    ("/proc/net/tcp6", "TCP"),
+    ("/proc/net/udp", "UDP"),
+    ("/proc/net/udp6", "UDP"),
+];
+
+fn read_socket_table<F>(mut on_socket: F)
+where
+    F: FnMut(u64, SocketInfo),
+{
+    for &(path, proto) in PROC_NET_TABLES {
         let Ok(content) = std::fs::read_to_string(path) else {
             continue;
         };
@@ -480,131 +469,110 @@ fn build_port_pid_map() -> HashMap<(String, u16), PortEntry> {
             if cols.len() < 10 {
                 continue;
             }
-            let port = cols[1]
+            let Some(port) = cols[1]
                 .split(':')
                 .nth(1)
-                .and_then(|p| u16::from_str_radix(p, 16).ok());
-            let state = cols[3].to_uppercase();
-            let uid: u32 = cols[7].parse().unwrap_or(0);
-            let inode = cols[9].parse::<u64>().ok();
-            if let (Some(p), Some(i)) = (port, inode) {
-                inode_to_meta.insert(
-                    i,
-                    InodeMeta {
-                        proto: proto.to_string(),
-                        port: p,
-                        state,
-                        uid,
-                    },
-                );
-            }
+                .and_then(|p| u16::from_str_radix(p, 16).ok())
+            else {
+                continue;
+            };
+            let Ok(inode) = cols[9].parse::<u64>() else {
+                continue;
+            };
+            on_socket(
+                inode,
+                SocketInfo {
+                    proto,
+                    port,
+                    state: cols[3].to_uppercase(),
+                    uid: cols[7].parse().unwrap_or(0),
+                },
+            );
         }
     }
+}
 
-    let mut result: HashMap<(String, u16), PortEntry> = HashMap::new();
-    let Ok(entries) = std::fs::read_dir("/proc") else {
-        return result;
+fn parse_socket_inode(link: &str) -> Option<u64> {
+    link.strip_prefix("socket:[")
+        .and_then(|s| s.strip_suffix(']'))
+        .and_then(|s| s.parse().ok())
+}
+
+fn for_each_proc_socket<F: FnMut(u32, u64)>(mut visit: F) {
+    let Ok(procs) = std::fs::read_dir("/proc") else {
+        return;
     };
-    for entry in entries.flatten() {
-        let name = entry.file_name();
-        let pid_str = name.to_string_lossy();
-        let Ok(pid) = pid_str.parse::<u32>() else {
+    for entry in procs.flatten() {
+        let Ok(pid) = entry.file_name().to_string_lossy().parse::<u32>() else {
             continue;
         };
-        let fd_dir = format!("/proc/{}/fd", pid);
-        let Ok(fds) = std::fs::read_dir(&fd_dir) else {
+        let Ok(fds) = std::fs::read_dir(format!("/proc/{pid}/fd")) else {
             continue;
         };
         for fd in fds.flatten() {
             let Ok(link) = std::fs::read_link(fd.path()) else {
                 continue;
             };
-            let Some(s) = link.to_str() else { continue };
-            let Some(rest) = s.strip_prefix("socket:[") else {
+            let Some(inode) = link.to_str().and_then(parse_socket_inode) else {
                 continue;
             };
-            let Some(num) = rest.strip_suffix(']') else {
-                continue;
-            };
-            let Ok(inode) = num.parse::<u64>() else {
-                continue;
-            };
-            if let Some(meta) = inode_to_meta.get(&inode) {
-                result
-                    .entry((meta.proto.clone(), meta.port))
-                    .or_insert_with(|| PortEntry {
-                        pid,
-                        state: tcp_state_str(&meta.state).to_string(),
-                        user: uid_to_username(meta.uid),
-                    });
-            }
+            visit(pid, inode);
         }
     }
+}
+
+fn build_port_pid_map() -> HashMap<(String, u16), PortEntry> {
+    let mut by_inode: HashMap<u64, SocketInfo> = HashMap::new();
+    read_socket_table(|inode, info| {
+        by_inode.insert(inode, info);
+    });
+
+    let mut result: HashMap<(String, u16), PortEntry> = HashMap::new();
+    for_each_proc_socket(|pid, inode| {
+        if let Some(meta) = by_inode.get(&inode) {
+            result
+                .entry((meta.proto.to_string(), meta.port))
+                .or_insert_with(|| PortEntry {
+                    pid,
+                    state: tcp_state_str(&meta.state).to_string(),
+                    user: uid_to_username(meta.uid),
+                });
+        }
+    });
     result
 }
 
 fn lookup_pid_for_port(proto: &str, local_port: u16) -> Option<PortEntry> {
-    let paths: &[&str] = match proto {
-        "TCP" => &["/proc/net/tcp", "/proc/net/tcp6"],
-        "UDP" => &["/proc/net/udp", "/proc/net/udp6"],
-        _ => return None,
-    };
+    let mut target_inode: Option<u64> = None;
+    let mut target_state = String::new();
+    let mut target_uid = 0u32;
 
-    let mut found_inode: Option<u64> = None;
-    let mut found_state = String::new();
-    let mut found_uid = 0u32;
-
-    'outer: for path in paths {
-        let Ok(content) = std::fs::read_to_string(path) else {
-            continue;
-        };
-        for line in content.lines().skip(1) {
-            let cols: Vec<&str> = line.split_whitespace().collect();
-            if cols.len() < 10 {
-                continue;
-            }
-            let port = cols[1]
-                .split(':')
-                .nth(1)
-                .and_then(|p| u16::from_str_radix(p, 16).ok());
-            if port == Some(local_port) {
-                found_inode = cols[9].parse::<u64>().ok();
-                found_state = cols[3].to_uppercase();
-                found_uid = cols[7].parse().unwrap_or(0);
-                break 'outer;
-            }
+    read_socket_table(|inode, info| {
+        if target_inode.is_some() || info.proto != proto || info.port != local_port {
+            return;
         }
-    }
+        target_inode = Some(inode);
+        target_state = info.state;
+        target_uid = info.uid;
+    });
 
-    let inode = found_inode?;
-    let socket_str = format!("socket:[{}]", inode);
-
-    for entry in std::fs::read_dir("/proc").ok()?.flatten() {
-        let pid_str = entry.file_name().to_string_lossy().to_string();
-        let Ok(pid) = pid_str.parse::<u32>() else {
-            continue;
-        };
-        let fd_dir = format!("/proc/{}/fd", pid);
-        let Ok(fds) = std::fs::read_dir(&fd_dir) else {
-            continue;
-        };
-        for fd in fds.flatten() {
-            if let Ok(link) = std::fs::read_link(fd.path()) {
-                if link.to_str().map_or(false, |s| s == socket_str) {
-                    return Some(PortEntry {
-                        pid,
-                        state: tcp_state_str(&found_state).to_string(),
-                        user: uid_to_username(found_uid),
-                    });
-                }
-            }
+    let inode = target_inode?;
+    let mut found: Option<u32> = None;
+    for_each_proc_socket(|pid, candidate| {
+        if found.is_none() && candidate == inode {
+            found = Some(pid);
         }
-    }
-    None
+    });
+
+    found.map(|pid| PortEntry {
+        pid,
+        state: tcp_state_str(&target_state).to_string(),
+        user: uid_to_username(target_uid),
+    })
 }
 
 fn read_process_name(pid: u32) -> Option<String> {
-    std::fs::read_to_string(format!("/proc/{}/comm", pid))
+    std::fs::read_to_string(format!("/proc/{pid}/comm"))
         .ok()
         .map(|s| s.trim().to_string())
 }

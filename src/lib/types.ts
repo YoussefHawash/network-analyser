@@ -58,7 +58,6 @@ export type MonitorSnapshot = {
 };
 
 export type FilterState = {
-  timeRange: string;
   interfaceName: string;
   processQuery: string;
   user: string;
@@ -67,14 +66,11 @@ export type FilterState = {
   minRate: number;
   processSort: SortKey;
   connectionSort: SortKey;
-  historyRange: string;
   refreshMs: number;
-  alertThreshold: number;
   paused: boolean;
 };
 
 export const DEFAULT_FILTERS: FilterState = {
-  timeRange: "live",
   interfaceName: "eth0",
   processQuery: "",
   user: "all",
@@ -83,8 +79,6 @@ export const DEFAULT_FILTERS: FilterState = {
   minRate: 0,
   processSort: "sent",
   connectionSort: "total",
-  historyRange: "24h",
   refreshMs: 1000,
-  alertThreshold: 18,
   paused: false,
 };

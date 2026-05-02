@@ -5,16 +5,9 @@ use monitor::Monitor;
 use std::sync::Mutex;
 use types::MonitorSnapshot;
 
+#[derive(Default)]
 struct AppState {
     monitor: Mutex<Option<(String, Monitor)>>,
-}
-
-impl Default for AppState {
-    fn default() -> Self {
-        Self {
-            monitor: Mutex::new(None),
-        }
-    }
 }
 
 #[tauri::command]
@@ -24,26 +17,25 @@ fn get_network_snapshot(
 ) -> Result<MonitorSnapshot, String> {
     let mut guard = state.monitor.lock().map_err(|e| e.to_string())?;
 
-    let needs_restart = match guard.as_ref() {
-        None => true,
-        Some((iface, _)) => iface != &interface_name,
-    };
+    let target = resolve_interface(&interface_name);
+    let needs_restart = !matches!(guard.as_ref(), Some((iface, _)) if iface == &target);
 
     if needs_restart {
-        let target = resolve_interface(&interface_name);
-        let new_monitor = Monitor::start(&target).map_err(|e| e.to_string())?;
-        *guard = Some((target, new_monitor));
+        let monitor = Monitor::start(&target).map_err(|e| e.to_string())?;
+        *guard = Some((target, monitor));
     }
 
-    Ok(guard.as_ref().unwrap().1.snapshot())
+    let (_, monitor) = guard
+        .as_ref()
+        .expect("monitor was just initialized");
+    Ok(monitor.snapshot())
 }
 
-/// Returns the requested interface if it exists among pcap devices, otherwise
-/// falls back to the first available device (or "any" as a last resort).
+/// Returns the requested interface if available, otherwise the first device
+/// pcap reports (falling back to "any").
 fn resolve_interface(requested: &str) -> String {
-    let devices = match pcap::Device::list() {
-        Ok(d) => d,
-        Err(_) => return requested.to_string(),
+    let Ok(devices) = pcap::Device::list() else {
+        return requested.to_string();
     };
     if devices.iter().any(|d| d.name == requested) {
         return requested.to_string();

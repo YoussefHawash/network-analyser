@@ -23,7 +23,6 @@ export function StatCards({ snapshot, processes, connections }: Props) {
         valueClass="text-app-blue"
         label="Total Received"
         value={formatRate(snapshot?.receivedRate ?? 0)}
-        sub=""
       />
       <Card
         icon="↑"
@@ -31,7 +30,6 @@ export function StatCards({ snapshot, processes, connections }: Props) {
         valueClass="text-app-violet"
         label="Total Sent"
         value={formatRate(snapshot?.sentRate ?? 0)}
-        sub=""
       />
       <Card
         icon="⊞"
@@ -39,7 +37,7 @@ export function StatCards({ snapshot, processes, connections }: Props) {
         valueClass="text-app-green"
         label="Active Processes"
         value={String(processes.length)}
-        sub={`${userCount} users`}
+        sub={`${userCount} ${userCount === 1 ? "user" : "users"}`}
       />
       <Card
         icon="⊕"
@@ -47,37 +45,41 @@ export function StatCards({ snapshot, processes, connections }: Props) {
         valueClass="text-app-orange"
         label="Active Connections"
         value={String(connections.length)}
-        sub={`${hostCount} remote hosts`}
+        sub={`${hostCount} remote ${hostCount === 1 ? "host" : "hosts"}`}
       />
     </div>
   );
 }
 
-function Card(props: {
+type CardProps = {
   icon: string;
   iconClass: string;
   valueClass: string;
   label: string;
   value: string;
-  sub: string;
-}) {
+  sub?: string;
+};
+
+function Card({ icon, iconClass, valueClass, label, value, sub }: CardProps) {
   return (
     <article className="flex min-h-[86px] items-center gap-3 rounded-lg border border-app-line bg-app-surface px-4 py-3.5">
       <div
-        className={`grid h-[38px] w-[38px] shrink-0 place-items-center rounded-lg text-lg ${props.iconClass}`}
+        className={`grid h-[38px] w-[38px] shrink-0 place-items-center rounded-lg text-lg ${iconClass}`}
       >
-        {props.icon}
+        {icon}
       </div>
       <div className="min-w-0 flex-1">
         <div className="mb-0.5 text-[10px] font-bold uppercase tracking-[0.6px] text-app-muted">
-          {props.label}
+          {label}
         </div>
         <div
-          className={`overflow-hidden text-ellipsis whitespace-nowrap text-[22px] font-bold leading-tight tabular-nums ${props.valueClass}`}
+          className={`overflow-hidden text-ellipsis whitespace-nowrap text-[22px] font-bold leading-tight tabular-nums ${valueClass}`}
         >
-          {props.value}
+          {value}
         </div>
-        <div className="mt-0.5 text-[11px] text-app-muted">{props.sub}</div>
+        {sub && (
+          <div className="mt-0.5 text-[11px] text-app-muted">{sub}</div>
+        )}
       </div>
     </article>
   );

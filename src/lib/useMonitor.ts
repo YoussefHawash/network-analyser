@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { sortableProcessValue, totalRate } from "./format";
 import type {
   ConnectionTraffic,
@@ -13,32 +13,15 @@ const MAX_TRAFFIC_POINTS = 34;
 
 export type TrafficHistory = { received: number[]; sent: number[] };
 
+const EMPTY_HISTORY: TrafficHistory = {
+  received: Array(MAX_TRAFFIC_POINTS).fill(0),
+  sent: Array(MAX_TRAFFIC_POINTS).fill(0),
+};
+
 export function useMonitor(filters: FilterState) {
   const [snapshot, setSnapshot] = useState<MonitorSnapshot | null>(null);
-  const [trafficHistory, setTrafficHistory] = useState<TrafficHistory>(() => ({
-    received: Array.from(
-      { length: MAX_TRAFFIC_POINTS },
-      () => 2 + Math.random() * 11,
-    ),
-    sent: Array.from(
-      { length: MAX_TRAFFIC_POINTS },
-      () => 1 + Math.random() * 8,
-    ),
-  }));
-
-  const tickRef = useRef(0);
-  const pausedAccumulated = useRef(0);
-  const pausedAt = useRef<number | null>(null);
-
-  // Track pause edges so uptime stays accurate.
-  useEffect(() => {
-    if (filters.paused) {
-      pausedAt.current = performance.now();
-    } else if (pausedAt.current !== null) {
-      pausedAccumulated.current += performance.now() - pausedAt.current;
-      pausedAt.current = null;
-    }
-  }, [filters.paused]);
+  const [trafficHistory, setTrafficHistory] =
+    useState<TrafficHistory>(EMPTY_HISTORY);
 
   useEffect(() => {
     if (filters.paused) return;
@@ -46,15 +29,9 @@ export function useMonitor(filters: FilterState) {
     let cancelled = false;
 
     const tick = async () => {
-      tickRef.current += 1;
-
       const next = await invoke<MonitorSnapshot>("get_network_snapshot", {
         interfaceName: filters.interfaceName,
       });
-      console.log(
-        `Tick ${tickRef.current}: received ${next.receivedRate} KB/s, sent ${next.sentRate} KB/s`,
-      );
-
       if (cancelled) return;
       setSnapshot(next);
       setTrafficHistory((prev) =>
@@ -68,13 +45,7 @@ export function useMonitor(filters: FilterState) {
       cancelled = true;
       window.clearInterval(id);
     };
-  }, [
-    filters.paused,
-    filters.refreshMs,
-    filters.interfaceName,
-    filters.timeRange,
-    filters.historyRange,
-  ]);
+  }, [filters.paused, filters.refreshMs, filters.interfaceName]);
 
   const filteredProcesses = useMemo(
     () => (snapshot ? filterProcesses(snapshot.processes, filters) : []),
@@ -94,9 +65,10 @@ function pushTrafficPoint(
   rx: number,
   tx: number,
 ): TrafficHistory {
-  const received = [...prev.received, rx].slice(-MAX_TRAFFIC_POINTS);
-  const sent = [...prev.sent, tx].slice(-MAX_TRAFFIC_POINTS);
-  return { received, sent };
+  return {
+    received: [...prev.received, rx].slice(-MAX_TRAFFIC_POINTS),
+    sent: [...prev.sent, tx].slice(-MAX_TRAFFIC_POINTS),
+  };
 }
 
 function filterProcesses(processes: ProcessTraffic[], filters: FilterState) {
@@ -146,11 +118,11 @@ function filterConnections(
 
   const result: GroupedConnection[] = [];
   for (const conns of groups.values()) {
-    const ports = [...new Set(conns.map((c) => c.port))];
-    const pids = [...new Set(conns.map((c) => c.pid))];
-    const protocols = [...new Set(conns.map((c) => c.protocol))];
-    const users = [...new Set(conns.map((c) => c.user).filter(Boolean))];
-    const states = [...new Set(conns.map((c) => c.state).filter(Boolean))];
+    const ports = unique(conns.map((c) => c.port));
+    const pids = unique(conns.map((c) => c.pid));
+    const protocols = unique(conns.map((c) => c.protocol));
+    const users = unique(conns.map((c) => c.user).filter(Boolean));
+    const states = unique(conns.map((c) => c.state).filter(Boolean));
     const totalRx = conns.reduce((s, c) => s + c.received, 0);
     const totalTx = conns.reduce((s, c) => s + c.sent, 0);
 
@@ -178,6 +150,10 @@ function filterConnections(
   return result.sort((a, b) => sortValue(b) - sortValue(a));
 }
 
+function unique<T>(values: T[]): T[] {
+  return [...new Set(values)];
+}
+
 function matches(
   name: string,
   pid: number,
@@ -189,20 +165,13 @@ function matches(
   f: FilterState,
 ) {
   const q = f.processQuery.trim().toLowerCase();
-  const queryMatches =
-    !q || name.toLowerCase().includes(q) || String(pid).includes(q);
-  const userMatches = f.user === "all" || user === f.user;
-  const protocolMatches = f.protocol === "all" || protocol === f.protocol;
-  const rateMatches = total >= f.minRate;
-  const directionMatches =
-    f.direction === "all" ||
-    (f.direction === "inbound" && rx >= tx) ||
-    (f.direction === "outbound" && tx >= rx);
-  return (
-    queryMatches &&
-    userMatches &&
-    protocolMatches &&
-    rateMatches &&
-    directionMatches
-  );
+  if (q && !name.toLowerCase().includes(q) && !String(pid).includes(q)) {
+    return false;
+  }
+  if (f.user !== "all" && user !== f.user) return false;
+  if (f.protocol !== "all" && protocol !== f.protocol) return false;
+  if (total < f.minRate) return false;
+  if (f.direction === "inbound" && rx < tx) return false;
+  if (f.direction === "outbound" && tx < rx) return false;
+  return true;
 }

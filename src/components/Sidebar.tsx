@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 import { formatRate, formatUptime } from "../lib/format";
 import { control, cx } from "../lib/styles";
 import type { Direction, FilterState, MonitorSnapshot } from "../lib/types";
@@ -19,6 +19,14 @@ export function Sidebar({
 }: Props) {
   const togglePause = () => onChange({ paused: !filters.paused });
 
+  const userOptions = useMemo(() => {
+    const seen = new Set<string>();
+    for (const p of snapshot?.processes ?? []) {
+      if (p.user) seen.add(p.user);
+    }
+    return [...seen].sort();
+  }, [snapshot]);
+
   return (
     <aside className="flex w-[214px] shrink-0 flex-col overflow-y-auto border-r border-app-line bg-app-surface">
       <section
@@ -32,30 +40,20 @@ export function Sidebar({
         </div>
 
         <ControlBlock>
-          {/* <Row label="Time Range">
-            <SelectField
-              value={filters.timeRange}
-              onChange={(e) => onChange({ timeRange: e.target.value })}
-            >
-              <option value="live">Live (Real-time)</option>
-              <option value="1h">Last 1 Hour</option>
-              <option value="24h">Last 24 Hours</option>
-              <option value="7d">Last 7 Days</option>
-            </SelectField>
-          </Row> */}
-
           <Row label="Interface">
             <SelectField
               value={filters.interfaceName}
-              onChange={(e) => {
-                onChange({ interfaceName: e.target.value });
-              }}
+              onChange={(e) => onChange({ interfaceName: e.target.value })}
             >
-              {snapshot?.availableInterfaces.map((iface) => (
-                <option key={iface} value={iface}>
-                  {iface}
-                </option>
-              )) || <option value="eth0">eth0</option>}
+              {snapshot?.availableInterfaces.length ? (
+                snapshot.availableInterfaces.map((iface) => (
+                  <option key={iface} value={iface}>
+                    {iface}
+                  </option>
+                ))
+              ) : (
+                <option value="eth0">eth0</option>
+              )}
             </SelectField>
           </Row>
         </ControlBlock>
@@ -78,10 +76,11 @@ export function Sidebar({
                 onChange={(e) => onChange({ user: e.target.value })}
               >
                 <option value="all">All Users</option>
-                <option value="alice">alice</option>
-                <option value="bob">bob</option>
-                <option value="root">root</option>
-                <option value="system">system</option>
+                {userOptions.map((user) => (
+                  <option key={user} value={user}>
+                    {user}
+                  </option>
+                ))}
               </SelectField>
             </Row>
 
@@ -130,19 +129,6 @@ export function Sidebar({
           </Row>
         </ControlBlock>
 
-        {/* <ControlBlock>
-          {/* <Row label="History">
-            <SelectField
-              value={filters.historyRange}
-              onChange={(e) => onChange({ historyRange: e.target.value })}
-            >
-              <option value="24h">Last 24 Hours</option>
-              <option value="7d">Last 7 Days</option>
-              <option value="30d">Last 30 Days</option>
-            </SelectField>
-          </Row> */}
-        {/* </ControlBlock> */}
-
         <ControlBlock>
           <Row label="Refresh">
             <SelectField
@@ -156,32 +142,17 @@ export function Sidebar({
             </SelectField>
           </Row>
 
-          {/* <Row label="Alert KB/s">
-            <input
-              className={control}
-              type="number"
-              min={1}
-              step={1}
-              value={filters.alertThreshold}
-              onChange={(e) =>
-                onChange({ alertThreshold: Number(e.target.value) || 1 })
-              }
-            />
-          </Row> */}
-
-          <div className="grid grid-cols-1 gap-1.5">
-            <button
-              type="button"
-              className={cx(
-                "min-h-7 rounded-md border border-app-blueStrong bg-app-blueStrong text-[11px] font-semibold text-white transition hover:border-app-blue hover:bg-app-blue",
-                filters.paused &&
-                  "border-app-orange bg-app-orange hover:border-app-orangeDark hover:bg-app-orangeDark",
-              )}
-              onClick={togglePause}
-            >
-              {filters.paused ? "Resume" : "Pause"}
-            </button>
-          </div>
+          <button
+            type="button"
+            className={cx(
+              "min-h-7 rounded-md border border-app-blueStrong bg-app-blueStrong text-[11px] font-semibold text-white transition hover:border-app-blue hover:bg-app-blue",
+              filters.paused &&
+                "border-app-orange bg-app-orange hover:border-app-orangeDark hover:bg-app-orangeDark",
+            )}
+            onClick={togglePause}
+          >
+            {filters.paused ? "Resume" : "Pause"}
+          </button>
         </ControlBlock>
       </section>
 
