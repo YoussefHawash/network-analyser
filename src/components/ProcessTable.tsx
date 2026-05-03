@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { formatRate, totalRate } from "../lib/format";
 import {
   badge,
@@ -46,8 +47,9 @@ export function ProcessTable({
       </div>
 
       <div className={cx(tableShell, "min-h-[286px]")}>
-        <table className="w-full min-w-[720px] table-fixed border-collapse">
+        <table className="w-full min-w-[744px] table-fixed border-collapse">
           <colgroup>
+            <col className="w-6" />
             <col className="w-[58px]" />
             <col className="w-[150px]" />
             <col className="w-[82px]" />
@@ -58,6 +60,7 @@ export function ProcessTable({
           </colgroup>
           <thead>
             <tr>
+              <th className={th}></th>
               <th className={th}>PID</th>
               <th className={th}>Process</th>
               <th className={th}>User</th>
@@ -70,7 +73,7 @@ export function ProcessTable({
           <tbody>
             {processes.length === 0 ? (
               <tr>
-                <td colSpan={7}>
+                <td colSpan={8}>
                   <div className="px-2 py-6 text-center text-app-muted">
                     No process traffic matches the current filters.
                   </div>
@@ -93,37 +96,66 @@ export function ProcessTable({
 }
 
 function ProcessRow({ process }: { process: ProcessTraffic }) {
+  const [expanded, setExpanded] = useState(false);
+  const threadCount = process.threads?.length ?? 0;
+  const hasThreads = threadCount > 0;
+
   return (
-    <tr className="group/row">
-      <td className={cx(mutedCell, numeric)}>{process.pid}</td>
-      <td>
-        <div
-          className="flex min-w-0 items-center gap-1.5 overflow-hidden text-ellipsis whitespace-nowrap font-semibold"
-          title={process.name}
-        >
-          {process.flag && (
-            <span className="inline-block w-[26px] shrink-0 text-center text-[10px] font-bold text-app-muted">
-              {process.flag}
+    <>
+      <tr className="group/row">
+        <td className="text-center">
+          {hasThreads ? (
+            <button
+              type="button"
+              onClick={() => setExpanded((v) => !v)}
+              className="text-app-muted hover:text-app-text"
+              aria-label={expanded ? "Collapse threads" : "Expand threads"}
+              title={`${threadCount} thread${threadCount === 1 ? "" : "s"}`}
+            >
+              {expanded ? "▾" : "▸"}
+            </button>
+          ) : null}
+        </td>
+        <td className={cx(mutedCell, numeric)}>{process.pid}</td>
+        <td>
+          <div
+            className="flex min-w-0 items-center gap-1.5 overflow-hidden text-ellipsis whitespace-nowrap font-semibold"
+            title={process.name}
+          >
+            {process.flag && (
+              <span className="inline-block w-[26px] shrink-0 text-center text-[10px] font-bold text-app-muted">
+                {process.flag}
+              </span>
+            )}
+            <span className="overflow-hidden text-ellipsis whitespace-nowrap">
+              {process.name}
             </span>
-          )}
-          <span className="overflow-hidden text-ellipsis whitespace-nowrap">
-            {process.name}
-          </span>
-        </div>
-      </td>
-      <td>{process.user}</td>
-      <td>
-        <span className={badge}>{process.protocol}</span>
-      </td>
-      <td className={cx("text-app-green", numeric)}>
-        {formatRate(process.received)}
-      </td>
-      <td className={cx("text-app-blue", numeric)}>
-        {formatRate(process.sent)}
-      </td>
-      <td className={cx("font-semibold", numeric)}>
-        {formatRate(totalRate(process))}
-      </td>
-    </tr>
+          </div>
+        </td>
+        <td>{process.user}</td>
+        <td>
+          <span className={badge}>{process.protocol}</span>
+        </td>
+        <td className={cx("text-app-green", numeric)}>
+          {formatRate(process.received)}
+        </td>
+        <td className={cx("text-app-blue", numeric)}>
+          {formatRate(process.sent)}
+        </td>
+        <td className={cx("font-semibold", numeric)}>
+          {formatRate(totalRate(process))}
+        </td>
+      </tr>
+      {expanded &&
+        process.threads.map((t) => (
+          <tr key={t.tid} className="bg-black/10 text-[11px] text-app-muted">
+            <td></td>
+            <td className={cx(mutedCell, numeric)}>{t.tid}</td>
+            <td colSpan={6} className="overflow-hidden text-ellipsis whitespace-nowrap pl-4">
+              <span className="text-app-subtle">↳</span> {t.name || "(unnamed thread)"}
+            </td>
+          </tr>
+        ))}
+    </>
   );
 }

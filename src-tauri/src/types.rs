@@ -24,6 +24,14 @@ pub struct ProcessTraffic {
     pub received: f64,
     pub sent: f64,
     pub history: Vec<f64>,
+    pub threads: Vec<ThreadInfo>,
+}
+
+#[derive(serde::Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct ThreadInfo {
+    pub tid: u32,
+    pub name: String,
 }
 
 #[derive(serde::Serialize, Clone)]

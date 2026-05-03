@@ -1,6 +1,11 @@
 export type Direction = "all" | "inbound" | "outbound";
 export type SortKey = "sent" | "received" | "total";
 
+export type ThreadInfo = {
+  tid: number;
+  name: string;
+};
+
 export type ProcessTraffic = {
   pid: number;
   name: string;
@@ -10,6 +15,7 @@ export type ProcessTraffic = {
   received: number;
   sent: number;
   history: number[];
+  threads: ThreadInfo[];
 };
 
 export type ConnectionTraffic = {

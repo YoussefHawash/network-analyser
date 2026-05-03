@@ -1,5 +1,6 @@
 use crate::types::{
     ConnectionTraffic, HistoryBucket, MonitorSnapshot, ParsedPacket, ProcessTraffic, Protocol,
+    ThreadInfo,
 };
 use etherparse::{NetHeaders, PacketHeaders, TransportHeader};
 use maxminddb::{geoip2, Reader};
@@ -172,6 +173,7 @@ impl State {
                 received: 0.0,
                 sent: 0.0,
                 history: vec![],
+                threads: read_process_threads(c.pid),
             });
             entry.received += c.received;
             entry.sent += c.sent;
@@ -575,4 +577,26 @@ fn read_process_name(pid: u32) -> Option<String> {
     std::fs::read_to_string(format!("/proc/{pid}/comm"))
         .ok()
         .map(|s| s.trim().to_string())
+}
+
+fn read_process_threads(pid: u32) -> Vec<ThreadInfo> {
+    if pid == 0 {
+        return Vec::new();
+    }
+    let Ok(entries) = std::fs::read_dir(format!("/proc/{pid}/task")) else {
+        return Vec::new();
+    };
+    let mut threads: Vec<ThreadInfo> = entries
+        .flatten()
+        .filter_map(|e| {
+            let tid: u32 = e.file_name().to_string_lossy().parse().ok()?;
+            let name = std::fs::read_to_string(format!("/proc/{pid}/task/{tid}/comm"))
+                .ok()
+                .map(|s| s.trim().to_string())
+                .unwrap_or_default();
+            Some(ThreadInfo { tid, name })
+        })
+        .collect();
+    threads.sort_by_key(|t| t.tid);
+    threads
 }
